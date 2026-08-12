@@ -1,2 +1,2 @@
 import { validate } from 'class-validator'; import { JoinRoomDto } from './dto';
-describe('room DTOs', () => { it('rejects invalid join payloads', async () => { const dto = Object.assign(new JoinRoomDto(), { code: 'A', displayName: 'X' }); expect((await validate(dto)).length).toBeGreaterThan(0); }); });
+describe('room DTOs', () => { it('accepts exactly six numeric digits and rejects other room codes', async () => { const valid = Object.assign(new JoinRoomDto(), { code: '482731', displayName: 'Player' }); expect(await validate(valid)).toHaveLength(0); for (const code of ['A', 'ABC123', '12345', '1234567']) { const invalid = Object.assign(new JoinRoomDto(), { code, displayName: 'Player' }); expect((await validate(invalid)).length).toBeGreaterThan(0); } }); });

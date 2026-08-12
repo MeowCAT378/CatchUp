@@ -50,6 +50,9 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     expect((await request(app.getHttpServer()).get(`/quizzes/${quiz.id}`).set('Authorization', `Bearer ${hostToken}`)).body.data.questions).toHaveLength(2);
     const room = body<{ code: string }>(await request(app.getHttpServer()).post('/rooms').set('Authorization', `Bearer ${hostToken}`).send({ quizId: quiz.id })).data;
     code = room.code;
+    expect(code).toMatch(/^\d{6}$/);
+    await request(app.getHttpServer()).post('/rooms/join').send({ code: 'ABC123', displayName: 'Invalid' }).expect(400);
+    await request(app.getHttpServer()).post('/rooms/join').send({ code: '12345', displayName: 'Invalid' }).expect(400);
     expect(body<{ phase: string }>(await request(app.getHttpServer()).get(`/rooms/${code}`)).data.phase).toBe('WAITING');
     expect((await request(app.getHttpServer()).post(`/rooms/${code}/start`).set('Authorization', `Bearer ${otherHostToken}`)).body.error.code).toBe('FORBIDDEN');
 

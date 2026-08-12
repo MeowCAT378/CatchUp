@@ -1,0 +1,1 @@
+import { IsString, MinLength } from 'class-validator'; export class CreateRoomDto { @IsString() quizId!: string; } export class JoinRoomDto { @IsString() @MinLength(4) code!: string; @IsString() @MinLength(2) displayName!: string; } export class SubmitAnswerDto { @IsString() participantId!: string; @IsString() participantToken!: string; @IsString() choiceId!: string; }

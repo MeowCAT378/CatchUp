@@ -1,0 +1,2 @@
+import { pointsForAnswer } from './scoring'; import { competitionRanks } from './ranking';
+describe('room scoring and ranking', () => { it('scores only correct answers', () => { expect(pointsForAnswer(true)).toBe(1000); expect(pointsForAnswer(false)).toBe(0); }); it.each([[[10, 10, 8, 7], [1, 1, 3, 4]], [[5, 5, 5], [1, 1, 1]], [[], []], [[9], [1]]])('uses competition ranking', (scores, ranks) => { expect(competitionRanks(scores, (score) => score).map((entry) => entry.rank)).toEqual(ranks); }); });

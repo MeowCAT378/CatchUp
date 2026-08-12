@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.next/
+out/
+
+# Local secrets (keep committed examples)
+.env*
+!.env*.example
+
+# Logs and local tooling
+*.log
+.DS_Store
+.vercel/
+*.tsbuildinfo

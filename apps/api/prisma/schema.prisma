@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  HOST
+  PLAYER
+}
+enum RoomStatus {
+  LOBBY
+  ACTIVE
+  FINISHED
+}
+enum RoomPhase {
+  WAITING
+  ACTIVE
+  REVEALED
+  COMPLETED
+}
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  name String?
+  role Role @default(HOST)
+  quizzes Quiz[] @relation("QuizOwner")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Quiz {
+  id String @id @default(cuid())
+  title String
+  description String?
+  ownerId String
+  owner User @relation("QuizOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  questions Question[]
+  rooms Room[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([ownerId])
+}
+model Question {
+  id String @id @default(cuid())
+  quizId String
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text String
+  position Int
+  choices Choice[]
+  answers Answer[]
+  @@unique([quizId, position])
+}
+model Choice {
+  id String @id @default(cuid())
+  questionId String
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text String
+  isCorrect Boolean @default(false)
+  answers Answer[]
+}
+model Room {
+  id String @id @default(cuid())
+  code String @unique
+  quizId String
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Restrict)
+  hostId String
+  status RoomStatus @default(LOBBY)
+  phase RoomPhase @default(WAITING)
+  currentQuestionIndex Int @default(0)
+  participants Participant[]
+  attempts QuizAttempt[]
+  createdAt DateTime @default(now())
+  @@index([hostId])
+}
+model Participant {
+  id String @id @default(cuid())
+  accessToken String @unique @default(cuid())
+  roomId String
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  displayName String
+  attempts QuizAttempt[]
+  joinedAt DateTime @default(now())
+  @@unique([roomId, displayName])
+}
+model QuizAttempt {
+  id String @id @default(cuid())
+  roomId String
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  participantId String
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  score Int @default(0)
+  finishedAt DateTime?
+  answers Answer[]
+  @@unique([roomId, participantId])
+  @@index([roomId, score])
+}
+model Answer {
+  id String @id @default(cuid())
+  attemptId String
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  choiceId String
+  choice Choice @relation(fields: [choiceId], references: [id], onDelete: Restrict)
+  isCorrect Boolean
+  submittedAt DateTime @default(now())
+  @@unique([attemptId, questionId])
+}

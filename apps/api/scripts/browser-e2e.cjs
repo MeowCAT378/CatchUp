@@ -1,13 +1,15 @@
 const { spawn } = require('node:child_process');
 const { chromium } = require('playwright');
 
-const web = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '-p', '3001'], { cwd: '../web', stdio: 'pipe' });
-const fail = (error) => { web.kill(); throw error; };
+const webUrl = process.env.CATCHUP_WEB_URL ?? 'http://localhost:3000';
+let web;
+const fail = (error) => { web?.kill(); throw error; };
 (async () => {
-  for (let i = 0; i < 30; i++) { try { if ((await fetch('http://localhost:3001')).ok) break; } catch {} await new Promise((resolve) => setTimeout(resolve, 250)); }
+  try { await fetch(webUrl); } catch { web = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '-p', '3000'], { cwd: '../web', stdio: 'pipe' }); }
+  for (let i = 0; i < 30; i++) { try { if ((await fetch(webUrl)).ok) break; } catch {} await new Promise((resolve) => setTimeout(resolve, 250)); }
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-  await page.goto('http://localhost:3001');
+  await page.goto(webUrl);
   await page.getByRole('heading', { name: 'ทำให้ทุกการเรียนรู้มีส่วนร่วม' }).waitFor();
   await page.waitForTimeout(1000);
   await page.getByRole('button', { name: 'EN', exact: true }).click();
@@ -18,5 +20,5 @@ const fail = (error) => { web.kill(); throw error; };
   await page.getByRole('heading', { name: 'ทำให้ทุกการเรียนรู้มีส่วนร่วม' }).waitFor();
   await page.reload();
   await page.getByRole('heading', { name: 'ทำให้ทุกการเรียนรู้มีส่วนร่วม' }).waitFor();
-  await browser.close(); web.kill(); console.log('Browser i18n smoke: passed');
+  await browser.close(); web?.kill(); console.log('Browser i18n smoke: passed');
 })().catch(fail);

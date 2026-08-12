@@ -1,8 +1,45 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: catchup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: catchup
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dekif66@buu
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d catchup"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: catchup-postgres-test
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: catchup_test
+      POSTGRES_USER: catchup_test
+      POSTGRES_PASSWORD: catchup_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catchup_test -d catchup_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: catchup-pgadmin
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin123
@@ -12,4 +49,5 @@ services:
       - pgadmin_data:/var/lib/pgadmin
 
 volumes:
+  postgres_data:
   pgadmin_data:

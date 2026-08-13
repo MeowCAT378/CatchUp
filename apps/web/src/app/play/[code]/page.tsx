@@ -1,2 +1,162 @@
-'use client'; import { useEffect, useRef, useState } from 'react'; import { useRouter } from 'next/navigation'; import { useTranslation } from 'react-i18next'; import { api, type ApiErrorCode } from '@/lib/api'; import { clearParticipant, participantFor } from '@/lib/participant'; import { RoomEvents, roomSocket } from '@/lib/room-socket'; type State = { phase: string; question: null | { text: string; position: number; total: number; choices: { id: string; text: string }[] }; answerSubmitted: boolean }; type Result = { leaderboard: { rank: number; displayName: string; score: number }[] };
-export default function Play({ params }: { params: Promise<{ code: string }> }) { const { t } = useTranslation(); const router = useRouter(); const socket = useRef<ReturnType<typeof roomSocket> | null>(null); const [code, setCode] = useState(''); const [state, setState] = useState<State>(); const [result, setResult] = useState<Result>(); const [error, setError] = useState(''); const [submitting, setSubmitting] = useState(false); useEffect(() => { params.then(async ({ code }) => { const participant = participantFor(code); if (!participant) return router.replace(`/join?code=${code}`); setCode(code); try { setState(await api<State>(`/rooms/${code}?participantId=${participant.id}&participantToken=${participant.token}`)); } catch { clearParticipant(code); return router.replace(`/join?code=${code}`); } socket.current = roomSocket(); socket.current.on('connect', () => socket.current?.emit(RoomEvents.join, { code, participantId: participant.id, participantToken: participant.token })); socket.current.on(RoomEvents.state, (next: State) => { setState(next); setSubmitting(false); }); socket.current.on(RoomEvents.questionStarted, setState); socket.current.on(RoomEvents.quizStarted, setState); socket.current.on(RoomEvents.questionRevealed, setState); socket.current.on(RoomEvents.leaderboardUpdated, setResult); socket.current.on(RoomEvents.quizCompleted, setResult); socket.current.on(RoomEvents.error, (x: { code?: ApiErrorCode }) => { const errorCode = x.code ?? 'REQUEST_FAILED'; setError(t(`errors.${errorCode}`)); setSubmitting(false); if (errorCode === 'PARTICIPANT_NOT_FOUND') { clearParticipant(code); router.replace(`/join?code=${code}`); } }); }); return () => { socket.current?.disconnect(); }; }, [router, t]); const answer = (choiceId: string) => { const participant = participantFor(code); if (!participant || submitting) return; setSubmitting(true); socket.current?.emit(RoomEvents.answerSubmit, { code, participantId: participant.id, participantToken: participant.token, choiceId }); }; return <main className="page-shell"><div className="page-content max-w-3xl"><p className="badge">{t('common.roomCode')} {code}</p>{state?.phase === 'WAITING' && <section className="panel mt-6 text-center text-xl font-semibold text-slate-700">{t('player.waitingForHost')}</section>}{state?.question && <section className="panel mt-6"><p className="font-semibold text-sky-700">{state.question.position} / {state.question.total}</p><h1 className="mt-3 text-3xl font-black leading-tight text-slate-900 sm:text-5xl">{state.question.text}</h1>{state.phase === 'ACTIVE' && <div className="mt-7 grid gap-3">{state.question.choices.map((choice) => <button disabled={state.answerSubmitted || submitting} key={choice.id} onClick={() => answer(choice.id)} className="min-h-16 rounded-2xl border border-sky-200 bg-white p-5 text-left text-lg font-bold shadow-sm transition hover:border-sky-400 hover:bg-sky-50 disabled:opacity-50">{choice.text}</button>)}</div>}{state.answerSubmitted && <p className="mt-5 rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-800">{t('player.answerRecorded')}</p>}</section>}{result && <section className="panel mt-6"><h2 className="text-2xl font-black">{t('room.leaderboard')}</h2><ol className="mt-4 grid gap-2">{result.leaderboard.map((x) => <li key={x.rank} className="rounded-xl bg-sky-50 p-3 font-semibold">{x.rank}. {x.displayName}: {x.score}</li>)}</ol></section>}{error && <p role="alert" className="alert-error mt-5">{error}</p>}</div></main>; }
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { ChartBarIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { api, type ApiErrorCode } from "@/lib/api";
+import { clearParticipant, participantFor } from "@/lib/participant";
+import { RoomEvents, roomSocket } from "@/lib/room-socket";
+type State = {
+  phase: string;
+  question: null | {
+    text: string;
+    position: number;
+    total: number;
+    choices: { id: string; text: string }[];
+  };
+  answerSubmitted: boolean;
+};
+type Result = {
+  leaderboard: { rank: number; displayName: string; score: number }[];
+};
+export default function Play({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const socket = useRef<ReturnType<typeof roomSocket> | null>(null);
+  const [code, setCode] = useState("");
+  const [state, setState] = useState<State>();
+  const [result, setResult] = useState<Result>();
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    params.then(async ({ code }) => {
+      const participant = participantFor(code);
+      if (!participant) return router.replace(`/join?code=${code}`);
+      setCode(code);
+      try {
+        setState(
+          await api<State>(
+            `/rooms/${code}?participantId=${participant.id}&participantToken=${participant.token}`,
+          ),
+        );
+      } catch {
+        clearParticipant(code);
+        return router.replace(`/join?code=${code}`);
+      }
+      socket.current = roomSocket();
+      socket.current.on("connect", () =>
+        socket.current?.emit(RoomEvents.join, {
+          code,
+          participantId: participant.id,
+          participantToken: participant.token,
+        }),
+      );
+      socket.current.on(RoomEvents.state, (next: State) => {
+        setState(next);
+        setSubmitting(false);
+      });
+      socket.current.on(RoomEvents.questionStarted, setState);
+      socket.current.on(RoomEvents.quizStarted, setState);
+      socket.current.on(RoomEvents.questionRevealed, setState);
+      socket.current.on(RoomEvents.leaderboardUpdated, setResult);
+      socket.current.on(RoomEvents.quizCompleted, setResult);
+      socket.current.on(RoomEvents.error, (x: { code?: ApiErrorCode }) => {
+        const errorCode = x.code ?? "REQUEST_FAILED";
+        setError(t(`errors.${errorCode}`));
+        setSubmitting(false);
+        if (errorCode === "PARTICIPANT_NOT_FOUND") {
+          clearParticipant(code);
+          router.replace(`/join?code=${code}`);
+        }
+      });
+    });
+    return () => {
+      socket.current?.disconnect();
+    };
+  }, [router, t]);
+  const answer = (choiceId: string) => {
+    const participant = participantFor(code);
+    if (!participant || submitting) return;
+    setSubmitting(true);
+    socket.current?.emit(RoomEvents.answerSubmit, {
+      code,
+      participantId: participant.id,
+      participantToken: participant.token,
+      choiceId,
+    });
+  };
+  return (
+    <main className="page-shell">
+      <div className="page-content max-w-3xl">
+        <p className="badge">
+          {t("common.roomCode")} {code}
+        </p>
+        {state?.phase === "WAITING" && (
+          <section className="panel mt-6 text-center text-xl font-semibold text-slate-700">
+            {t("player.waitingForHost")}
+          </section>
+        )}
+        {state?.question && (
+          <section className="panel mt-6">
+            <p className="font-semibold text-sky-700">
+              {state.question.position} / {state.question.total}
+            </p>
+            <h1 className="mt-3 text-3xl font-black leading-tight text-slate-900 sm:text-5xl">
+              {state.question.text}
+            </h1>
+            {state.phase === "ACTIVE" && (
+              <div className="mt-7 grid gap-3">
+                {state.question.choices.map((choice) => (
+                  <button
+                    disabled={state.answerSubmitted || submitting}
+                    key={choice.id}
+                    onClick={() => answer(choice.id)}
+                    className="min-h-16 rounded-2xl border border-sky-200 bg-white p-5 text-left text-lg font-bold shadow-sm transition hover:border-sky-400 hover:bg-sky-50 disabled:opacity-50"
+                  >
+                    {choice.text}
+                  </button>
+                ))}
+              </div>
+            )}
+            {state.answerSubmitted && (
+              <p className="mt-5 rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-800">
+                <CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />
+                {t("player.answerRecorded")}
+              </p>
+            )}
+          </section>
+        )}
+        {result && (
+          <section className="panel mt-6">
+            <h2 className="flex items-center gap-2 text-2xl font-black">
+              <ChartBarIcon
+                className="h-6 w-6 text-sky-700"
+                aria-hidden="true"
+              />
+              {t("room.leaderboard")}
+            </h2>
+            <ol className="mt-4 grid gap-2">
+              {result.leaderboard.map((x) => (
+                <li
+                  key={x.rank}
+                  className="rounded-xl bg-sky-50 p-3 font-semibold"
+                >
+                  {x.rank}. {x.displayName}: {x.score}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+        {error && (
+          <p role="alert" className="alert-error mt-5">
+            {error}
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}

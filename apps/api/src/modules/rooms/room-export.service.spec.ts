@@ -1,2 +1,15 @@
 import { escapeCsvCell, sanitizeSpreadsheetCell } from './room-export.service';
-describe('spreadsheet escaping', () => { it.each(['=1+1', '+cmd', '-10', '@SUM(A1)', '*unsafe'])('sanitizes formula prefixes', (value) => { expect(sanitizeSpreadsheetCell(value)).toBe(`'${value}`); }); it('preserves Thai Unicode', () => { expect(sanitizeSpreadsheetCell('ไทย')).toBe('ไทย'); }); it('escapes commas, quotes, and line breaks', () => { expect(escapeCsvCell('a,"b"\nไทย')).toBe('"a,""b""\nไทย"'); }); });
+describe('spreadsheet escaping', () => {
+  it.each(['=1+1', '+cmd', '-10', '@SUM(A1)', '*unsafe'])(
+    'sanitizes formula prefixes',
+    (value) => {
+      expect(sanitizeSpreadsheetCell(value)).toBe(`'${value}`);
+    },
+  );
+  it('preserves Thai Unicode', () => {
+    expect(sanitizeSpreadsheetCell('ไทย')).toBe('ไทย');
+  });
+  it('escapes commas, quotes, and line breaks', () => {
+    expect(escapeCsvCell('a,"b"\nไทย')).toBe('"a,""b""\nไทย"');
+  });
+});

@@ -1,8 +1,178 @@
-import { Injectable } from '@nestjs/common'; import ExcelJS from 'exceljs'; import { RoomResultsService } from './room-results.service';
-export const sanitizeSpreadsheetCell = (value: unknown) => { const text = String(value ?? ''); return /^[=+\-@*]/.test(text) ? `'${text}` : text; }; export const escapeCsvCell = (value: unknown) => `"${sanitizeSpreadsheetCell(value).replaceAll('"', '""')}"`; const safe = sanitizeSpreadsheetCell; const csv = escapeCsvCell;
-@Injectable() export class RoomExportService { constructor(private readonly results: RoomResultsService) {} async csv(code: string, hostId: string) { const data = await this.results.results(code, hostId); const rows: unknown[][] = [['Quiz title', data.room.quizTitle], ['Room code', data.room.code], ['Exported at', new Date().toISOString()], ['Participants', data.summary.totalParticipants], ['Average score', data.summary.averageScore], ['Completion rate', `${data.summary.completionRate}%`], [], ['Rank', 'Participant', 'Score', 'Answered', 'Correct', 'Incorrect', 'Completion %'], ...data.participants.map((p) => [p.rank, p.name, p.score, p.answeredCount, p.correctCount, p.incorrectCount, `${data.questions.length ? Math.round((p.answeredCount / data.questions.length) * 100) : 0}%`])]; return Buffer.from(`\ufeff${rows.map((row) => row.map(csv).join(',')).join('\r\n')}`, 'utf8'); }
-  async xlsx(code: string, hostId: string) { const data = await this.results.results(code, hostId); const book = new ExcelJS.Workbook(); book.creator = 'CatchUp'; const header = (sheet: ExcelJS.Worksheet, values: string[]) => { const row = sheet.addRow(values); row.font = { bold: true }; sheet.views = [{ state: 'frozen', ySplit: 1 }]; }; const summary = book.addWorksheet('Summary'); summary.addRows([['Quiz title', safe(data.room.quizTitle)], ['Room code', data.room.code], ['Room status', data.room.phase], ['Participant count', data.summary.totalParticipants], ['Total responses', data.summary.totalSubmittedAnswers], ['Completion rate', data.summary.completionRate / 100], ['Average score', data.summary.averageScore], ['Highest score', data.summary.highestScore], ['Lowest score', data.summary.lowestScore]]); summary.getColumn(1).width = 22; summary.getColumn(2).width = 42; summary.getCell('A1').font = { bold: true }; summary.getColumn(2).numFmt = 'General'; summary.getCell('B6').numFmt = '0.0%';
-    const participants = book.addWorksheet('Participants'); header(participants, ['Rank', 'Participant', 'Score', 'Answered', 'Correct', 'Incorrect', 'Completion %']); data.participants.forEach((p) => participants.addRow([p.rank, safe(p.name), p.score, p.answeredCount, p.correctCount, p.incorrectCount, data.questions.length ? p.answeredCount / data.questions.length : 0])); participants.columns = [{ width: 10 }, { width: 28 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 16 }]; participants.getColumn(7).numFmt = '0.0%';
-    const questions = book.addWorksheet('Questions'); header(questions, ['Question #', 'Question', 'Responses', 'Unanswered', 'Correct', 'Incorrect', 'Correct %', 'Correct answer']); data.questions.forEach((q, i) => questions.addRow([i + 1, safe(q.text), q.responseCount, q.unansweredCount, q.correctCount, q.incorrectCount, q.correctPercentage / 100, q.correctChoiceId ? safe(q.distribution.find((choice) => choice.choiceId === q.correctChoiceId)?.text) : ''])); questions.columns = [{ width: 12 }, { width: 46 }, { width: 12 }, { width: 14 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 32 }]; questions.getColumn(7).numFmt = '0.0%';
-    const distribution = book.addWorksheet('Answer Distribution'); header(distribution, ['Question #', 'Question', 'Option', 'Responses', 'Percentage', 'Correct']); data.questions.forEach((q, i) => q.distribution.forEach((choice) => distribution.addRow([i + 1, safe(q.text), safe(choice.text), choice.count, q.responseCount ? choice.count / q.responseCount : 0, choice.isCorrect === undefined ? '' : choice.isCorrect ? 'Yes' : 'No']))); distribution.columns = [{ width: 12 }, { width: 42 }, { width: 32 }, { width: 12 }, { width: 14 }, { width: 12 }]; distribution.getColumn(5).numFmt = '0.0%'; return Buffer.from(await book.xlsx.writeBuffer()); }
+import { Injectable } from '@nestjs/common';
+import ExcelJS from 'exceljs';
+import { RoomResultsService } from './room-results.service';
+export const sanitizeSpreadsheetCell = (value: unknown) => {
+  const text = String(value ?? '');
+  return /^[=+\-@*]/.test(text) ? `'${text}` : text;
+};
+export const escapeCsvCell = (value: unknown) =>
+  `"${sanitizeSpreadsheetCell(value).replaceAll('"', '""')}"`;
+const safe = sanitizeSpreadsheetCell;
+const csv = escapeCsvCell;
+@Injectable()
+export class RoomExportService {
+  constructor(private readonly results: RoomResultsService) {}
+  async csv(code: string, hostId: string) {
+    const data = await this.results.results(code, hostId);
+    const rows: unknown[][] = [
+      ['Quiz title', data.room.quizTitle],
+      ['Room code', data.room.code],
+      ['Exported at', new Date().toISOString()],
+      ['Participants', data.summary.totalParticipants],
+      ['Average score', data.summary.averageScore],
+      ['Completion rate', `${data.summary.completionRate}%`],
+      [],
+      [
+        'Rank',
+        'Participant',
+        'Score',
+        'Answered',
+        'Correct',
+        'Incorrect',
+        'Completion %',
+      ],
+      ...data.participants.map((p) => [
+        p.rank,
+        p.name,
+        p.score,
+        p.answeredCount,
+        p.correctCount,
+        p.incorrectCount,
+        `${data.questions.length ? Math.round((p.answeredCount / data.questions.length) * 100) : 0}%`,
+      ]),
+    ];
+    return Buffer.from(
+      `\ufeff${rows.map((row) => row.map(csv).join(',')).join('\r\n')}`,
+      'utf8',
+    );
+  }
+  async xlsx(code: string, hostId: string) {
+    const data = await this.results.results(code, hostId);
+    const book = new ExcelJS.Workbook();
+    book.creator = 'CatchUp';
+    const header = (sheet: ExcelJS.Worksheet, values: string[]) => {
+      const row = sheet.addRow(values);
+      row.font = { bold: true };
+      sheet.views = [{ state: 'frozen', ySplit: 1 }];
+    };
+    const summary = book.addWorksheet('Summary');
+    summary.addRows([
+      ['Quiz title', safe(data.room.quizTitle)],
+      ['Room code', data.room.code],
+      ['Room status', data.room.phase],
+      ['Participant count', data.summary.totalParticipants],
+      ['Total responses', data.summary.totalSubmittedAnswers],
+      ['Completion rate', data.summary.completionRate / 100],
+      ['Average score', data.summary.averageScore],
+      ['Highest score', data.summary.highestScore],
+      ['Lowest score', data.summary.lowestScore],
+    ]);
+    summary.getColumn(1).width = 22;
+    summary.getColumn(2).width = 42;
+    summary.getCell('A1').font = { bold: true };
+    summary.getColumn(2).numFmt = 'General';
+    summary.getCell('B6').numFmt = '0.0%';
+    const participants = book.addWorksheet('Participants');
+    header(participants, [
+      'Rank',
+      'Participant',
+      'Score',
+      'Answered',
+      'Correct',
+      'Incorrect',
+      'Completion %',
+    ]);
+    data.participants.forEach((p) =>
+      participants.addRow([
+        p.rank,
+        safe(p.name),
+        p.score,
+        p.answeredCount,
+        p.correctCount,
+        p.incorrectCount,
+        data.questions.length ? p.answeredCount / data.questions.length : 0,
+      ]),
+    );
+    participants.columns = [
+      { width: 10 },
+      { width: 28 },
+      { width: 12 },
+      { width: 12 },
+      { width: 12 },
+      { width: 12 },
+      { width: 16 },
+    ];
+    participants.getColumn(7).numFmt = '0.0%';
+    const questions = book.addWorksheet('Questions');
+    header(questions, [
+      'Question #',
+      'Question',
+      'Responses',
+      'Unanswered',
+      'Correct',
+      'Incorrect',
+      'Correct %',
+      'Correct answer',
+    ]);
+    data.questions.forEach((q, i) =>
+      questions.addRow([
+        i + 1,
+        safe(q.text),
+        q.responseCount,
+        q.unansweredCount,
+        q.correctCount,
+        q.incorrectCount,
+        q.correctPercentage / 100,
+        q.correctChoiceId
+          ? safe(
+              q.distribution.find(
+                (choice) => choice.choiceId === q.correctChoiceId,
+              )?.text,
+            )
+          : '',
+      ]),
+    );
+    questions.columns = [
+      { width: 12 },
+      { width: 46 },
+      { width: 12 },
+      { width: 14 },
+      { width: 12 },
+      { width: 12 },
+      { width: 14 },
+      { width: 32 },
+    ];
+    questions.getColumn(7).numFmt = '0.0%';
+    const distribution = book.addWorksheet('Answer Distribution');
+    header(distribution, [
+      'Question #',
+      'Question',
+      'Option',
+      'Responses',
+      'Percentage',
+      'Correct',
+    ]);
+    data.questions.forEach((q, i) =>
+      q.distribution.forEach((choice) =>
+        distribution.addRow([
+          i + 1,
+          safe(q.text),
+          safe(choice.text),
+          choice.count,
+          q.responseCount ? choice.count / q.responseCount : 0,
+          choice.isCorrect === undefined ? '' : choice.isCorrect ? 'Yes' : 'No',
+        ]),
+      ),
+    );
+    distribution.columns = [
+      { width: 12 },
+      { width: 42 },
+      { width: 32 },
+      { width: 12 },
+      { width: 14 },
+      { width: 12 },
+    ];
+    distribution.getColumn(5).numFmt = '0.0%';
+    return Buffer.from(await book.xlsx.writeBuffer());
+  }
 }

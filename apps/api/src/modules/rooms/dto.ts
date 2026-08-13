@@ -1,1 +1,13 @@
-import { IsString, Matches, MinLength } from 'class-validator'; export class CreateRoomDto { @IsString() quizId!: string; } export class JoinRoomDto { @IsString() @Matches(/^\d{6}$/) code!: string; @IsString() @MinLength(2) displayName!: string; } export class SubmitAnswerDto { @IsString() participantId!: string; @IsString() participantToken!: string; @IsString() choiceId!: string; }
+import { IsString, Matches, MinLength } from 'class-validator';
+export class CreateRoomDto {
+  @IsString() quizId!: string;
+}
+export class JoinRoomDto {
+  @IsString() @Matches(/^\d{6}$/) code!: string;
+  @IsString() @MinLength(2) displayName!: string;
+}
+export class SubmitAnswerDto {
+  @IsString() participantId!: string;
+  @IsString() participantToken!: string;
+  @IsString() choiceId!: string;
+}

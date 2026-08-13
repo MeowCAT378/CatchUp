@@ -1,1 +1,13 @@
-export function competitionRanks<T>(items: readonly T[], score: (item: T) => number) { let previousScore: number | undefined; let rank = 0; return items.map((item, index) => { const value = score(item); if (value !== previousScore) rank = index + 1; previousScore = value; return { item, rank }; }); }
+export function competitionRanks<T>(
+  items: readonly T[],
+  score: (item: T) => number,
+) {
+  let previousScore: number | undefined;
+  let rank = 0;
+  return items.map((item, index) => {
+    const value = score(item);
+    if (value !== previousScore) rank = index + 1;
+    previousScore = value;
+    return { item, rank };
+  });
+}

@@ -12,7 +12,7 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { RoomsService } from './rooms.service';
 import { RoomEvents } from './room-events';
-import type { AnswerSubmitPayload, RoomJoinPayload } from './room-events';
+import type { AnswerSubmitPayload, RoomJoinPayload, WordCloudSubmitPayload, WordCloudVotePayload } from './room-events';
 type SocketData = {
   userId?: string;
   code?: string;
@@ -157,6 +157,18 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.error(client, error);
     }
   }
+  @SubscribeMessage(RoomEvents.wordCloudSubmit) async wordCloudSubmit(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: WordCloudSubmitPayload,
+  ) {
+    await this.wordCloud(client, body, () => this.rooms.submitWord(body.code, body.participantId, body.participantToken, body.text));
+  }
+  @SubscribeMessage(RoomEvents.wordCloudVote) async wordCloudVote(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: WordCloudVotePayload,
+  ) {
+    await this.wordCloud(client, body, () => this.rooms.voteWord(body.code, body.participantId, body.participantToken, body.entryId));
+  }
   @SubscribeMessage(RoomEvents.questionReveal) async reveal(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { code: string },
@@ -222,6 +234,22 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new ForbiddenException();
       await action();
       await this.dashboard(code);
+    } catch (error) {
+      this.error(client, error);
+    }
+  }
+  private async wordCloud(
+    client: Socket,
+    body: WordCloudSubmitPayload | WordCloudVotePayload,
+    action: () => Promise<unknown>,
+  ) {
+    try {
+      const data = client.data as SocketData;
+      if (data.role !== 'participant' || data.code !== body.code || data.participantId !== body.participantId || data.participantToken !== body.participantToken)
+        throw new ForbiddenException();
+      await action();
+      this.server.to(this.group(body.code)).emit(RoomEvents.wordCloudUpdated, await this.rooms.state(body.code));
+      await this.dashboard(body.code);
     } catch (error) {
       this.error(client, error);
     }

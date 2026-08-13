@@ -8,6 +8,7 @@ import { api, ApiError } from "@/lib/api";
 
 type Quiz = {
   title: string;
+  type: "QUIZ" | "POLL" | "WORD_CLOUD";
   questions: {
     id: string;
     text: string;
@@ -42,7 +43,8 @@ export default function QuizEditor({
     void load();
   }, [quizId, token]);
   async function add() {
-    if (!text.trim() || choices.some((choice) => !choice.trim()) || saving)
+    const needsChoices = quiz?.type !== "WORD_CLOUD";
+    if (!text.trim() || (needsChoices && choices.some((choice) => !choice.trim())) || saving)
       return;
     setSaving(true);
     setError("");
@@ -53,10 +55,10 @@ export default function QuizEditor({
           method: "POST",
           body: JSON.stringify({
             text,
-            choices: choices.map((choice, index) => ({
+            choices: needsChoices ? choices.map((choice, index) => ({
               text: choice,
-              isCorrect: index === correctIndex,
-            })),
+              isCorrect: quiz?.type === "QUIZ" && index === correctIndex,
+            })) : [],
           }),
         },
         token,
@@ -96,15 +98,16 @@ export default function QuizEditor({
             className="form-input"
           />
           {choices.map((choice, index) => (
+            quiz?.type !== "WORD_CLOUD" &&
             <div key={index} className="mt-3 flex items-center gap-3">
-              <input
+              {quiz?.type === "QUIZ" && <input
                 aria-label={t("quiz.markCorrect")}
                 checked={correctIndex === index}
                 onChange={() => setCorrectIndex(index)}
                 type="radio"
                 name="correct-choice"
                 className="size-5 accent-emerald-600"
-              />
+              />}
               <label className="sr-only" htmlFor={`choice-${index}`}>
                 {t("quiz.choiceNumber", { number: index + 1 })}
               </label>
@@ -123,14 +126,14 @@ export default function QuizEditor({
               />
             </div>
           ))}
-          <p className="mt-3 flex items-center gap-1 text-sm text-emerald-700">
+          {quiz?.type === "QUIZ" && <p className="mt-3 flex items-center gap-1 text-sm text-emerald-700">
             <CheckIcon className="h-4 w-4" aria-hidden="true" />
             {t("quiz.markCorrect")}
-          </p>
+          </p>}
           <button
             onClick={add}
             disabled={
-              saving || !text.trim() || choices.some((choice) => !choice.trim())
+              saving || !text.trim() || (quiz?.type !== "WORD_CLOUD" && choices.some((choice) => !choice.trim()))
             }
             className="btn-primary mt-5"
           >
@@ -153,21 +156,21 @@ export default function QuizEditor({
                   <strong className="text-lg text-slate-900">
                     {question.text}
                   </strong>
-                  <ul className="mt-3 grid gap-2">
+                  {quiz.type !== "WORD_CLOUD" && <ul className="mt-3 grid gap-2">
                     {question.choices.map((choice) => (
                       <li
                         key={choice.id}
                         className={
-                          choice.isCorrect
+                          quiz.type === "QUIZ" && choice.isCorrect
                             ? "rounded-xl bg-emerald-50 px-3 py-2 text-emerald-900"
                             : "rounded-xl bg-sky-50 px-3 py-2"
                         }
                       >
                         {choice.text}
-                        {choice.isCorrect ? ` (${t("quiz.correct")})` : ""}
+                        {quiz.type === "QUIZ" && choice.isCorrect ? ` (${t("quiz.correct")})` : ""}
                       </li>
                     ))}
-                  </ul>
+                  </ul>}
                 </li>
               ))
             ) : (

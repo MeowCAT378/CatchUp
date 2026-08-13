@@ -4,6 +4,8 @@ export const RoomEvents = {
   quizStart: 'quiz:start',
   questionStart: 'question:start',
   answerSubmit: 'answer:submit',
+  wordCloudSubmit: 'wordcloud:submit',
+  wordCloudVote: 'wordcloud:vote',
   questionReveal: 'question:reveal',
   questionNext: 'question:next',
   quizComplete: 'quiz:complete',
@@ -15,6 +17,7 @@ export const RoomEvents = {
   answerProgress: 'answer:progress',
   questionRevealed: 'question:revealed',
   leaderboardUpdated: 'leaderboard:updated',
+  wordCloudUpdated: 'wordcloud:updated',
   dashboardUpdated: 'dashboard:updated',
   quizCompleted: 'quiz:completed',
   error: 'room:error',
@@ -30,3 +33,5 @@ export type AnswerSubmitPayload = {
   participantToken: string;
   choiceId: string;
 };
+export type WordCloudSubmitPayload = Omit<AnswerSubmitPayload, 'choiceId'> & { text: string };
+export type WordCloudVotePayload = Omit<AnswerSubmitPayload, 'choiceId'> & { entryId: string };

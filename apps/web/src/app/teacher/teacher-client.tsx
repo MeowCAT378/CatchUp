@@ -5,13 +5,18 @@ import {
   PencilSquareIcon,
   PlayIcon,
   PlusIcon,
+  ChartBarIcon,
+  ChatBubbleLeftRightIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { api, ApiError } from "@/lib/api";
-type Quiz = { id: string; title: string; _count: { questions: number } };
+type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
+type Quiz = { id: string; title: string; type: ActivityType; _count: { questions: number } };
 export default function TeacherClient({ token }: { token: string }) {
   const { t } = useTranslation();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [title, setTitle] = useState("");
+  const [type, setType] = useState<ActivityType>();
   const [room, setRoom] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,7 +35,7 @@ export default function TeacherClient({ token }: { token: string }) {
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const quizTitle = title.trim();
-    if (!quizTitle) {
+    if (!quizTitle || !type) {
       setError(t("errors.VALIDATION_ERROR"));
       return;
     }
@@ -41,10 +46,11 @@ export default function TeacherClient({ token }: { token: string }) {
     try {
       await api<Quiz>(
         "/quizzes",
-        { method: "POST", body: JSON.stringify({ title: quizTitle }) },
+        { method: "POST", body: JSON.stringify({ title: quizTitle, type }) },
         token,
       );
       setTitle("");
+      setType(undefined);
       await load();
     } catch (e) {
       setError(
@@ -88,15 +94,27 @@ export default function TeacherClient({ token }: { token: string }) {
           </div>
         </div>
         <section className="panel mt-7">
-          <form className="flex flex-col gap-3 sm:flex-row" onSubmit={create} noValidate>
+          {!type ? <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              ["QUIZ", QuestionMarkCircleIcon],
+              ["POLL", ChartBarIcon],
+              ["WORD_CLOUD", ChatBubbleLeftRightIcon],
+            ] as const).map(([activityType, Icon]) => (
+              <button key={activityType} type="button" onClick={() => setType(activityType)} className="soft-card text-left transition hover:border-sky-400 hover:bg-sky-50">
+                <Icon className="h-7 w-7 text-sky-700" aria-hidden="true" />
+                <strong className="mt-3 block text-lg text-slate-900">{t(`activity.${activityType}.name`)}</strong>
+                <span className="mt-1 block text-sm text-slate-600">{t(`activity.${activityType}.description`)}</span>
+              </button>
+            ))}
+          </div> : <form className="flex flex-col gap-3 sm:flex-row" onSubmit={create} noValidate>
             <label className="sr-only" htmlFor="quiz-title">
-              {t("quiz.newQuiz")}
+              {t("activity.title", { type: t(`activity.${type}.name`) })}
             </label>
             <input
               id="quiz-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("quiz.newQuiz")}
+              placeholder={t("activity.title", { type: t(`activity.${type}.name`) })}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? "create-quiz-error" : undefined}
               className="form-input mt-0 flex-1"
@@ -105,7 +123,8 @@ export default function TeacherClient({ token }: { token: string }) {
               <PlusIcon className="h-5 w-5" aria-hidden="true" />
               {busy ? t("common.loading") : t("common.create")}
             </button>
-          </form>
+            <button type="button" onClick={() => setType(undefined)} className="btn-secondary">{t("common.back")}</button>
+          </form>}
           {room && (
             <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-emerald-900">
               {t("common.roomCode")}: <strong>{room}</strong>{" "}
@@ -135,6 +154,7 @@ export default function TeacherClient({ token }: { token: string }) {
                   <span className="font-medium text-slate-500">
                     ({quiz._count.questions} {t("quiz.questions")})
                   </span>
+                  <span className="ml-2 badge">{t(`activity.${quiz.type}.name`)}</span>
                 </span>
                 <span className="flex flex-wrap gap-2">
                   <a

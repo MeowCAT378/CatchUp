@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
+import { ActivityType } from '@prisma/client';
 import {
-  ArrayMinSize,
+  IsEnum,
   IsArray,
   IsBoolean,
   IsOptional,
@@ -15,15 +16,16 @@ export class ChoiceDto {
 }
 export class CreateQuestionDto {
   @IsString() @MinLength(1) text!: string;
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(2)
   @ValidateNested({ each: true })
   @Type(() => ChoiceDto)
-  choices!: ChoiceDto[];
+  choices?: ChoiceDto[];
 }
 export class CreateQuizDto {
   @IsString() @MinLength(1) title!: string;
   @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsEnum(ActivityType) type?: ActivityType;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

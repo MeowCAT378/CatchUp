@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto';
+export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 @Injectable()
 export class AuthService {
   constructor(
@@ -14,11 +15,12 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
   async register(dto: RegisterDto) {
-    if (await this.prisma.user.findUnique({ where: { email: dto.email } }))
+    const email = normalizeEmail(dto.email);
+    if (await this.prisma.user.findUnique({ where: { email } }))
       throw new ConflictException('Email is already registered');
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         name: dto.name,
         passwordHash: await bcrypt.hash(dto.password, 12),
       },
@@ -26,8 +28,9 @@ export class AuthService {
     return this.token(user);
   }
   async login(dto: LoginDto) {
+    const email = normalizeEmail(dto.email);
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash)))
       throw new UnauthorizedException('Invalid email or password');

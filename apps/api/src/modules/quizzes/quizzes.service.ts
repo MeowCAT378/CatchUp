@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ActivityType } from '@prisma/client';
 import { AppError } from '../../common/app-error';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -31,13 +32,14 @@ export class QuizzesService {
       data: {
         title: dto.title,
         description: dto.description,
+        type: dto.type ?? ActivityType.QUIZ,
         ownerId,
         questions: dto.questions
           ? {
               create: dto.questions.map((q, position) => ({
                 text: q.text,
                 position,
-                choices: { create: q.choices },
+                choices: { create: q.choices ?? [] },
               })),
             }
           : undefined,
@@ -57,14 +59,15 @@ export class QuizzesService {
     return this.prisma.quiz.delete({ where: { id } });
   }
   async addQuestion(quizId: string, ownerId: string, dto: CreateQuestionDto) {
-    await this.owned(quizId, ownerId);
+    const quiz = await this.owned(quizId, ownerId);
+    this.validateQuestion(quiz.type, dto);
     const position = await this.prisma.question.count({ where: { quizId } });
     return this.prisma.question.create({
       data: {
         quizId,
         text: dto.text,
         position,
-        choices: { create: dto.choices },
+        choices: { create: dto.choices ?? [] },
       },
       include: { choices: true },
     });
@@ -103,5 +106,17 @@ export class QuizzesService {
     if (!quiz) throw new AppError('QUIZ_NOT_FOUND', 404, 'Quiz not found');
     if (quiz.ownerId !== ownerId) throw new ForbiddenException();
     return quiz;
+  }
+  private validateQuestion(type: ActivityType, dto: CreateQuestionDto) {
+    const choices = dto.choices ?? [];
+    if (type === ActivityType.WORD_CLOUD) {
+      if (choices.length)
+        throw new AppError('VALIDATION_ERROR', 400, 'Word clouds do not use choices');
+      return;
+    }
+    if (choices.length < 2)
+      throw new AppError('VALIDATION_ERROR', 400, 'Questions need at least two choices');
+    if (type === ActivityType.QUIZ && choices.filter((choice) => choice.isCorrect).length !== 1)
+      throw new AppError('VALIDATION_ERROR', 400, 'Quizzes need exactly one correct choice');
   }
 }

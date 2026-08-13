@@ -18,6 +18,7 @@ import { RoomEvents, roomSocket } from "@/lib/room-socket";
 type Dashboard = {
   state: {
     phase: "WAITING" | "ACTIVE" | "REVEALED" | "COMPLETED";
+    activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
     question: null | { text: string };
   };
   participants: { id: string; name: string; status: string }[];
@@ -30,6 +31,7 @@ type Dashboard = {
     isCorrect: boolean;
   }[];
   leaderboard: { rank: number; displayName: string; score: number }[];
+  entries: { id: string; text: string; votes: number }[];
 };
 
 export default function HostRoom({
@@ -166,11 +168,13 @@ export default function HostRoom({
             </div>
           </div>
         </section>
-        {(phase === "REVEALED" || phase === "COMPLETED") && (
+        {(data?.state.activityType === "WORD_CLOUD" || phase === "REVEALED" || phase === "COMPLETED") && (
           <section className="mt-6 grid gap-6 md:grid-cols-2">
             <div className="panel">
               <h2 className="text-xl font-bold">{t("room.distribution")}</h2>
-              {data?.distribution.map((x) => (
+              {data?.state.activityType === "WORD_CLOUD" ? <div className="mt-3 flex flex-wrap gap-3">{data.entries.map((entry) => (
+                <span key={entry.id} style={{ fontSize: `${18 + (46 * entry.votes) / Math.max(1, ...data.entries.map((x) => x.votes))}px` }} className="rounded-xl bg-sky-50 px-3 py-2 font-bold">{entry.text} {entry.votes}</span>
+              ))}</div> : data?.distribution.map((x) => (
                 <p
                   key={x.id}
                   className={
@@ -180,6 +184,7 @@ export default function HostRoom({
                   }
                 >
                   {x.text}: {x.count}
+                  {data?.state.activityType === "POLL" && ` (${data.progress.submitted ? Math.round((x.count / data.progress.submitted) * 100) : 0}%)`}
                 </p>
               ))}
             </div>

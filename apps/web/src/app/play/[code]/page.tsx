@@ -2,17 +2,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { ChartBarIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, CheckIcon, HeartIcon } from "@heroicons/react/24/outline";
 import { api, type ApiErrorCode } from "@/lib/api";
 import { clearParticipant, participantFor } from "@/lib/participant";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
 type State = {
   phase: string;
+  activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
   question: null | {
     text: string;
     position: number;
     total: number;
     choices: { id: string; text: string }[];
+    entries: { id: string; text: string; votes: number; voted: boolean }[];
   };
   answerSubmitted: boolean;
 };
@@ -32,6 +34,7 @@ export default function Play({
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [word, setWord] = useState("");
   useEffect(() => {
     params.then(async ({ code }) => {
       const participant = participantFor(code);
@@ -62,6 +65,10 @@ export default function Play({
       socket.current.on(RoomEvents.questionStarted, setState);
       socket.current.on(RoomEvents.quizStarted, setState);
       socket.current.on(RoomEvents.questionRevealed, setState);
+      socket.current.on(RoomEvents.wordCloudUpdated, (next: State) => {
+        setState(next);
+        setSubmitting(false);
+      });
       socket.current.on(RoomEvents.leaderboardUpdated, setResult);
       socket.current.on(RoomEvents.quizCompleted, setResult);
       socket.current.on(RoomEvents.error, (x: { code?: ApiErrorCode }) => {
@@ -89,6 +96,13 @@ export default function Play({
       choiceId,
     });
   };
+  const wordAction = (event: string, value: Record<string, string>) => {
+    const participant = participantFor(code);
+    if (!participant || submitting) return;
+    setSubmitting(true);
+    socket.current?.emit(event, { code, participantId: participant.id, participantToken: participant.token, ...value });
+    if (event === RoomEvents.wordCloudSubmit) setWord("");
+  };
   return (
     <main className="page-shell">
       <div className="page-content max-w-3xl">
@@ -108,7 +122,7 @@ export default function Play({
             <h1 className="mt-3 text-3xl font-black leading-tight text-slate-900 sm:text-5xl">
               {state.question.text}
             </h1>
-            {state.phase === "ACTIVE" && (
+            {state.phase === "ACTIVE" && state.activityType !== "WORD_CLOUD" && (
               <div className="mt-7 grid gap-3">
                 {state.question.choices.map((choice) => (
                   <button
@@ -120,6 +134,21 @@ export default function Play({
                     {choice.text}
                   </button>
                 ))}
+              </div>
+            )}
+            {state.phase === "ACTIVE" && state.activityType === "WORD_CLOUD" && (
+              <div className="mt-7">
+                <div className="flex gap-3">
+                  <input value={word} maxLength={30} onChange={(e) => setWord(e.target.value)} className="form-input mt-0 flex-1" placeholder={t("wordCloud.addResponse")} />
+                  <button disabled={!word.trim() || submitting} onClick={() => wordAction(RoomEvents.wordCloudSubmit, { text: word })} className="btn-primary">{t("wordCloud.addResponse")}</button>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {state.question.entries.map((entry) => (
+                    <button key={entry.id} disabled={entry.voted || submitting} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} style={{ fontSize: `${18 + (46 * entry.votes) / Math.max(1, ...state.question!.entries.map((x) => x.votes))}px` }} className="rounded-2xl bg-sky-50 px-4 py-3 font-bold text-slate-900 disabled:opacity-50">
+                      {entry.text} <HeartIcon className="inline h-5 w-5" aria-hidden="true" /> {entry.votes}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {state.answerSubmitted && (

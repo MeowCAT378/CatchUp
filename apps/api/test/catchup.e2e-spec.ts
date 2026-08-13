@@ -100,6 +100,13 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     const next = once<{ question: { position: number } }>(playerSocket, 'question:started');
     hostSocket.emit('question:next', { code });
     expect((await next).question.position).toBe(2);
+    expect(body<{ question: { position: number }; answerSubmitted: boolean }>(await request(app.getHttpServer()).get(`/rooms/${code}?participantId=${participant.participantId}&participantToken=${participant.participantToken}`)).data).toMatchObject({ question: { position: 2 }, answerSubmitted: false });
+    recoveredSocket.disconnect();
+    recoveredSocket = io(`${baseUrl}/rooms`, { transports: ['websocket'] });
+    await once(recoveredSocket, 'connect');
+    const recoveredCurrent = once<{ question: { position: number } }>(recoveredSocket, 'room:state');
+    recoveredSocket.emit('room:join', { code, ...participant });
+    expect((await recoveredCurrent).question.position).toBe(2);
     const completed = once<{ phase: string }>(playerSocket, 'quiz:completed');
     hostSocket.emit('quiz:complete', { code });
     await completed;

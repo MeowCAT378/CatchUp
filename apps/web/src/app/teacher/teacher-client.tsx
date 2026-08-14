@@ -8,8 +8,10 @@ import {
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
   QuestionMarkCircleIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { api, ApiError } from "@/lib/api";
+import { ActivityTypeBadge } from "@/components/activity-type-badge";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Quiz = { id: string; title: string; type: ActivityType; _count: { questions: number } };
 export default function TeacherClient({ token }: { token: string }) {
@@ -20,6 +22,8 @@ export default function TeacherClient({ token }: { token: string }) {
   const [room, setRoom] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState<Quiz>();
+  const [deletingId, setDeletingId] = useState<string>();
   const creating = useRef(false);
   const load = () =>
     api<Quiz[]>("/quizzes", {}, token)
@@ -82,12 +86,25 @@ export default function TeacherClient({ token }: { token: string }) {
       setBusy(false);
     }
   }
+  async function remove() {
+    if (!confirming || deletingId) return;
+    setDeletingId(confirming.id);
+    setError("");
+    try {
+      await api(`/quizzes/${confirming.id}`, { method: "DELETE" }, token);
+      setQuizzes((items) => items.filter((quiz) => quiz.id !== confirming.id));
+      setConfirming(undefined);
+    } catch (e) {
+      setError(t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`));
+    } finally {
+      setDeletingId(undefined);
+    }
+  }
   return (
     <main className="page-shell">
       <div className="page-content max-w-4xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="badge">CatchUp</p>
             <h1 className="mt-3 text-4xl font-black text-slate-900">
               {t("quiz.myQuizzes")}
             </h1>
@@ -154,7 +171,7 @@ export default function TeacherClient({ token }: { token: string }) {
                   <span className="font-medium text-slate-500">
                     ({quiz._count.questions} {t("quiz.questions")})
                   </span>
-                  <span className="ml-2 badge">{t(`activity.${quiz.type}.name`)}</span>
+                  <ActivityTypeBadge type={quiz.type} />
                 </span>
                 <span className="flex flex-wrap gap-2">
                   <a
@@ -165,12 +182,21 @@ export default function TeacherClient({ token }: { token: string }) {
                     {t("common.edit")}
                   </a>
                   <button
-                    disabled={busy}
+                    disabled={busy || Boolean(deletingId)}
                     onClick={() => start(quiz.id)}
                     className="btn-primary"
                   >
                     <PlayIcon className="h-5 w-5" aria-hidden="true" />
                     {t("quiz.openRoom")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || Boolean(deletingId)}
+                    onClick={() => setConfirming(quiz)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <TrashIcon className="h-5 w-5" aria-hidden="true" />
+                    {t("common.delete")}
                   </button>
                 </span>
               </li>
@@ -181,6 +207,43 @@ export default function TeacherClient({ token }: { token: string }) {
             </li>
           )}
         </ul>
+        {confirming && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-activity-title"
+            aria-describedby="delete-activity-message"
+            className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"
+          >
+            <div className="panel max-w-md">
+              <h2 id="delete-activity-title" className="text-xl font-bold text-slate-900">
+                {t("teacher.deleteActivityTitle")}
+              </h2>
+              <p id="delete-activity-message" className="mt-2 text-slate-600">
+                {t("teacher.deleteActivityWarning")}
+              </p>
+              <div className="mt-5 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={Boolean(deletingId)}
+                  onClick={() => setConfirming(undefined)}
+                  className="btn-secondary"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(deletingId)}
+                  onClick={() => void remove()}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <TrashIcon className="h-5 w-5" aria-hidden="true" />
+                  {deletingId ? t("teacher.deletingActivity") : t("teacher.deleteActivity")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

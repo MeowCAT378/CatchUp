@@ -14,12 +14,13 @@ import {
 import { BackButton } from "@/components/back-button";
 import { api } from "@/lib/api";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
+import { WordCloudResults } from "@/components/word-cloud-results";
 
 type Dashboard = {
   state: {
     phase: "WAITING" | "ACTIVE" | "REVEALED" | "COMPLETED";
     activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
-    question: null | { text: string };
+    question: null | { text: string; entries: { id: string; text: string; votes: number; rank: number }[]; totalVotes: number };
   };
   participants: { id: string; name: string; status: string }[];
   progress: { submitted: number; participants: number };
@@ -79,7 +80,7 @@ export default function HostRoom({
               {t("common.connected")} / {data?.participants.length ?? 0}{" "}
               {t("common.participants")}
             </p>
-            {phase === "COMPLETED" && (
+            {phase === "COMPLETED" && data?.state.activityType !== "WORD_CLOUD" && (
               <a
                 href={`/teacher/room/${code}/results`}
                 className="btn-secondary mt-5 border-white bg-white text-sky-800"
@@ -105,7 +106,7 @@ export default function HostRoom({
               {data?.progress.submitted ?? 0} /{" "}
               {data?.progress.participants ?? 0} {t("common.answered")}
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            {!(phase === "COMPLETED" && data?.state.activityType === "WORD_CLOUD") && <div className="mt-6 flex flex-wrap gap-3">
               <button
                 disabled={phase !== "WAITING"}
                 onClick={() => emit(RoomEvents.quizStart)}
@@ -138,7 +139,7 @@ export default function HostRoom({
                 <StopIcon className="h-5 w-5" aria-hidden="true" />
                 {t("room.complete")}
               </button>
-            </div>
+            </div>}
           </div>
           <div className="panel">
             <h2 className="flex items-center gap-2 text-xl font-bold">
@@ -168,7 +169,13 @@ export default function HostRoom({
             </div>
           </div>
         </section>
-        {(data?.state.activityType === "WORD_CLOUD" || phase === "REVEALED" || phase === "COMPLETED") && (
+        {data?.state.activityType === "WORD_CLOUD" && phase === "COMPLETED" ? (
+          <section className="panel mt-6">
+            <h2 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">{t("wordCloud.results")}</h2>
+            <p className="mt-3 text-center text-lg font-semibold text-slate-700">{data.state.question?.text}</p>
+            <WordCloudResults entries={data.state.question?.entries ?? data.entries} totalVotes={data.state.question?.totalVotes ?? data.entries.reduce((total, entry) => total + entry.votes, 0)} emptyLabel={t("wordCloud.noEntries")} votesLabel={t("wordCloud.votes")} totalVotesLabel={t("wordCloud.totalVotes")} className="mt-6" />
+          </section>
+        ) : (data?.state.activityType === "WORD_CLOUD" || phase === "REVEALED" || phase === "COMPLETED") && (
           <section className="mt-6 grid gap-6 md:grid-cols-2">
             <div className="panel">
               <h2 className="text-xl font-bold">{t("room.distribution")}</h2>

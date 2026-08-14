@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
+import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { api, ApiError } from "@/lib/api";
 
 type Quiz = {
@@ -30,6 +31,8 @@ export default function QuizEditor({
   const [correctIndex, setCorrectIndex] = useState(0);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string>();
+  const [confirming, setConfirming] = useState<string>();
   const load = async () => {
     try {
       setQuiz(await api<Quiz>(`/quizzes/${quizId}`, {}, token));
@@ -75,6 +78,20 @@ export default function QuizEditor({
       setSaving(false);
     }
   }
+  async function remove(questionId: string) {
+    if (deleting) return;
+    setDeleting(questionId);
+    setError("");
+    try {
+      await api(`/quizzes/questions/${questionId}`, { method: "DELETE" }, token);
+      await load();
+      setConfirming(undefined);
+    } catch (e) {
+      setError(t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`));
+    } finally {
+      setDeleting(undefined);
+    }
+  }
   return (
     <main className="page-shell">
       <div className="page-content max-w-3xl">
@@ -82,6 +99,7 @@ export default function QuizEditor({
         <h1 className="mt-4 text-4xl font-black text-slate-900">
           {quiz?.title ?? t("quiz.quizEditor")}
         </h1>
+        {quiz && <div className="mt-3"><ActivityTypeBadge type={quiz.type} /></div>}
         <section className="panel mt-6">
           <h2 className="text-xl font-bold">{t("quiz.addQuestion")}</h2>
           <label
@@ -153,9 +171,7 @@ export default function QuizEditor({
             {quiz.questions.length ? (
               quiz.questions.map((question) => (
                 <li key={question.id} className="soft-card">
-                  <strong className="text-lg text-slate-900">
-                    {question.text}
-                  </strong>
+                  <div className="flex items-start justify-between gap-3"><strong className="text-lg text-slate-900">{question.text}</strong><button type="button" disabled={Boolean(deleting)} onClick={() => setConfirming(question.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><TrashIcon className="h-5 w-5" aria-hidden="true" />{t("quiz.deleteQuestion")}</button></div>
                   {quiz.type !== "WORD_CLOUD" && <ul className="mt-3 grid gap-2">
                     {question.choices.map((choice) => (
                       <li
@@ -180,6 +196,7 @@ export default function QuizEditor({
             )}
           </ol>
         )}
+        {confirming && <div role="dialog" aria-modal="true" className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"><div className="panel max-w-sm"><p className="font-semibold text-slate-900">{t("teacher.deleteQuestionConfirm")}</p><p className="mt-2 text-sm text-slate-600">{t("teacher.deleteQuestionWarning")}</p><div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setConfirming(undefined)} className="btn-secondary">{t("common.cancel")}</button><button type="button" disabled={Boolean(deleting)} onClick={() => { void remove(confirming); }} className="inline-flex min-h-11 items-center rounded-xl bg-red-600 px-4 py-2.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50"><TrashIcon className="h-5 w-5" aria-hidden="true" />{t("quiz.deleteQuestion")}</button></div></div></div>}
       </div>
     </main>
   );

@@ -219,9 +219,21 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.rooms.complete(body.code, (client.data as SocketData).userId!);
       this.server
         .to(this.group(body.code))
+        .emit(RoomEvents.state, await this.rooms.state(body.code));
+      this.server
+        .to(this.group(body.code))
         .emit(RoomEvents.quizCompleted, await this.rooms.result(body.code));
       await this.dashboard(body.code);
     });
+  }
+  activityDeleted(rooms: { id: string; code: string }[]) {
+    for (const room of rooms) {
+      this.server.to(this.group(room.code)).emit(RoomEvents.error, { code: 'ROOM_NOT_FOUND' });
+      this.server.in(this.group(room.code)).socketsLeave(this.group(room.code));
+      this.server.in(this.hostGroup(room.code)).socketsLeave(this.hostGroup(room.code));
+      for (const key of this.presence.keys())
+        if (key.startsWith(`${room.id}:`)) this.presence.delete(key);
+    }
   }
   private async host(
     client: Socket,

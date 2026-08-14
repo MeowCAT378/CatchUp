@@ -1,0 +1,8 @@
+ALTER TABLE "Answer" DROP CONSTRAINT "Answer_questionId_fkey";
+ALTER TABLE "Answer" ADD CONSTRAINT "Answer_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "Question"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "Answer" DROP CONSTRAINT "Answer_choiceId_fkey";
+ALTER TABLE "Answer" ADD CONSTRAINT "Answer_choiceId_fkey" FOREIGN KEY ("choiceId") REFERENCES "Choice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "Room" DROP CONSTRAINT "Room_quizId_fkey";
+ALTER TABLE "Room" ADD CONSTRAINT "Room_quizId_fkey" FOREIGN KEY ("quizId") REFERENCES "Quiz"("id") ON DELETE CASCADE ON UPDATE CASCADE;

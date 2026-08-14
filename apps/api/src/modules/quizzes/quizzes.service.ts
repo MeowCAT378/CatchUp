@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ActivityType } from '@prisma/client';
@@ -14,6 +15,7 @@ import {
 } from './dto';
 @Injectable()
 export class QuizzesService {
+  private readonly logger = new Logger(QuizzesService.name);
   constructor(private readonly prisma: PrismaService) {}
   list(ownerId: string) {
     return this.prisma.quiz.findMany({
@@ -32,7 +34,7 @@ export class QuizzesService {
       data: {
         title: dto.title,
         description: dto.description,
-        type: dto.type ?? ActivityType.QUIZ,
+        type: dto.type,
         ownerId,
         questions: dto.questions
           ? {
@@ -56,7 +58,56 @@ export class QuizzesService {
   }
   async remove(id: string, ownerId: string) {
     await this.owned(id, ownerId);
-    return this.prisma.quiz.delete({ where: { id } });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const rooms = await tx.room.findMany({
+          where: { quizId: id },
+          select: { id: true, code: true },
+        });
+        const roomIds = rooms.map((room) => room.id);
+        const questions = await tx.question.findMany({
+          where: { quizId: id },
+          select: { id: true },
+        });
+        const questionIds = questions.map((question) => question.id);
+
+        await tx.wordCloudVote.deleteMany({
+          where: {
+            OR: [
+              { entry: { roomId: { in: roomIds } } },
+              { entry: { questionId: { in: questionIds } } },
+              { participant: { roomId: { in: roomIds } } },
+            ],
+          },
+        });
+        await tx.wordCloudEntry.deleteMany({
+          where: {
+            OR: [
+              { roomId: { in: roomIds } },
+              { questionId: { in: questionIds } },
+            ],
+          },
+        });
+        await tx.answer.deleteMany({
+          where: {
+            OR: [
+              { attempt: { roomId: { in: roomIds } } },
+              { questionId: { in: questionIds } },
+            ],
+          },
+        });
+        await tx.quizAttempt.deleteMany({ where: { roomId: { in: roomIds } } });
+        await tx.participant.deleteMany({ where: { roomId: { in: roomIds } } });
+        await tx.room.deleteMany({ where: { id: { in: roomIds } } });
+        await tx.choice.deleteMany({ where: { questionId: { in: questionIds } } });
+        await tx.question.deleteMany({ where: { id: { in: questionIds } } });
+        await tx.quiz.delete({ where: { id } });
+        return { id, rooms };
+      });
+    } catch (error) {
+      this.logger.error(`Quiz deletion failed: ${id}`, error);
+      throw new AppError('DELETE_FAILED', 500, 'Could not delete activity');
+    }
   }
   async addQuestion(quizId: string, ownerId: string, dto: CreateQuestionDto) {
     const quiz = await this.owned(quizId, ownerId);
@@ -95,7 +146,19 @@ export class QuizzesService {
     });
     if (!question) throw new NotFoundException('Question not found');
     if (question.quiz.ownerId !== ownerId) throw new ForbiddenException();
-    return this.prisma.question.delete({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+      await tx.question.delete({ where: { id } });
+      const remaining = await tx.question.findMany({
+        where: { quizId: question.quizId, position: { gt: question.position } },
+        orderBy: { position: 'asc' },
+      });
+      for (const item of remaining)
+        await tx.question.update({
+          where: { id: item.id },
+          data: { position: item.position - 1 },
+        });
+      return { id };
+    });
   }
   private async owned(
     id: string,

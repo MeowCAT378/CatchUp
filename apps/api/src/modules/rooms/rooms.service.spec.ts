@@ -1,4 +1,4 @@
-import { Prisma, RoomPhase, RoomStatus } from '@prisma/client';
+import { ActivityType, Prisma, RoomPhase, RoomStatus } from '@prisma/client';
 import { AppError } from '../../common/app-error';
 import { RoomsService } from './rooms.service';
 const room = (phase: RoomPhase, status: RoomStatus = RoomStatus.ACTIVE) => ({
@@ -74,5 +74,29 @@ describe('RoomsService state machine', () => {
     expect(create).toHaveBeenCalledTimes(2);
     for (const [{ data }] of create.mock.calls)
       expect(data.code).toMatch(/^\d{6}$/);
+  });
+  it('returns persisted word-cloud votes as ranked final state', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest.fn().mockResolvedValue({
+          ...room(RoomPhase.COMPLETED, RoomStatus.FINISHED),
+          quiz: { type: ActivityType.WORD_CLOUD, questions: [{ id: 'q1', text: 'Prompt', choices: [] }] },
+        }),
+      },
+      wordCloudEntry: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'b', text: 'Beta', _count: { votes: 1 }, votes: [] },
+          { id: 'a', text: 'Alpha', _count: { votes: 3 }, votes: [] },
+        ]),
+      },
+    } as never);
+    const state = await target.state('123456');
+    expect(state.question).toMatchObject({
+      totalVotes: 4,
+      entries: [
+        { id: 'a', votes: 3, rank: 1 },
+        { id: 'b', votes: 1, rank: 2 },
+      ],
+    });
   });
 });

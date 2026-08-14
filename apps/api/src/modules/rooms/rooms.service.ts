@@ -101,6 +101,7 @@ export class RoomsService {
               total: room.quiz.questions.length,
               choices: question.choices.map(({ id, text }) => ({ id, text })),
               entries,
+              totalVotes: entries.reduce((total, entry) => total + entry.votes, 0),
             }
           : null,
       answerSubmitted: participantId
@@ -412,7 +413,8 @@ export class RoomsService {
     });
     return entries
       .map((entry) => ({ id: entry.id, text: entry.text, votes: entry._count.votes, voted: participantId ? entry.votes.length > 0 : false }))
-      .sort((a, b) => b.votes - a.votes || a.text.localeCompare(b.text));
+      .sort((a, b) => b.votes - a.votes || a.text.localeCompare(b.text))
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
   }
   private room(code: string) {
     return this.prisma.room

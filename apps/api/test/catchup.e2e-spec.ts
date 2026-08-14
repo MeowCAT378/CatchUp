@@ -1,6 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Role } from '@prisma/client';
+import { Role, RoomPhase, RoomStatus } from '@prisma/client';
 import { io, Socket } from 'socket.io-client';
 import request from 'supertest';
 import * as ExcelJS from 'exceljs';
@@ -92,6 +92,7 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     await request(app.getHttpServer()).get('/quizzes').expect(401);
     const quiz = body<{
       id: string;
+      type: 'QUIZ';
       questions: {
         id: string;
         choices: { id: string; isCorrect: boolean }[];
@@ -102,6 +103,7 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
         .set('Authorization', `Bearer ${hostToken}`)
         .send({
           title: 'แบบทดสอบ =Thai',
+          type: 'QUIZ',
           questions: [
             {
               text: 'คำถามหนึ่ง',
@@ -120,6 +122,42 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
           ],
         }),
     ).data;
+    expect(quiz.type).toBe('QUIZ');
+    const activities = await Promise.all(
+      ['POLL', 'WORD_CLOUD'].map((type) =>
+        request(app.getHttpServer())
+          .post('/quizzes')
+          .set('Authorization', `Bearer ${hostToken}`)
+          .send({ title: `Test ${type}`, type })
+          .expect(201),
+      ),
+    );
+    expect(activities.map((response) => response.body.data.type)).toEqual([
+      'POLL',
+      'WORD_CLOUD',
+    ]);
+    const listedActivities = body<{ id: string; type: string }[]>(
+      await request(app.getHttpServer())
+        .get('/quizzes')
+        .set('Authorization', `Bearer ${hostToken}`),
+    ).data;
+    expect(listedActivities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: quiz.id, type: 'QUIZ' }),
+        expect.objectContaining({ type: 'POLL' }),
+        expect.objectContaining({ type: 'WORD_CLOUD' }),
+      ]),
+    );
+    await request(app.getHttpServer())
+      .post('/quizzes')
+      .set('Authorization', `Bearer ${hostToken}`)
+      .send({ title: 'Missing type' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/quizzes')
+      .set('Authorization', `Bearer ${hostToken}`)
+      .send({ title: 'Unknown type', type: 'UNKNOWN' })
+      .expect(400);
     expect(
       (
         await request(app.getHttpServer())
@@ -360,4 +398,194 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       workbook.getWorksheet('Participants')?.getColumn(2).values,
     ).toContain("'=นักเรียนไทย");
   }, 30_000);
+
+  it('lets the owner delete used questions and cascades related data', async () => {
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { email: 'e2e+host@example.test' },
+    });
+    const createActivity = async (
+      type: 'QUIZ' | 'POLL' | 'WORD_CLOUD',
+      suffix: string,
+    ) =>
+      prisma.quiz.create({
+        data: {
+          title: `Delete ${suffix}`,
+          type,
+          ownerId: owner.id,
+          questions: {
+            create: [
+              {
+                text: `Used ${suffix}`,
+                position: 0,
+                choices:
+                  type === 'WORD_CLOUD'
+                    ? undefined
+                    : {
+                        create: [
+                          { text: 'Yes', isCorrect: type === 'QUIZ' },
+                          { text: 'No', isCorrect: false },
+                        ],
+                      },
+              },
+              {
+                text: `Unused ${suffix}`,
+                position: 1,
+                choices:
+                  type === 'WORD_CLOUD'
+                    ? undefined
+                    : { create: [{ text: 'Only', isCorrect: type === 'QUIZ' }] },
+              },
+            ],
+          },
+        },
+        include: { questions: { include: { choices: true }, orderBy: { position: 'asc' } } },
+      });
+    const createResponse = async (
+      quizId: string,
+      questionId: string,
+      choiceId: string,
+      code: string,
+    ) => {
+      const room = await prisma.room.create({ data: { quizId, hostId: owner.id, code, status: 'ACTIVE' } });
+      const participant = await prisma.participant.create({ data: { roomId: room.id, displayName: `Player ${code}` } });
+      const attempt = await prisma.quizAttempt.create({ data: { roomId: room.id, participantId: participant.id } });
+      await prisma.answer.create({ data: { attemptId: attempt.id, questionId, choiceId, isCorrect: false } });
+    };
+
+    const quiz = await createActivity('QUIZ', 'quiz');
+    await request(app.getHttpServer())
+      .delete(`/quizzes/questions/${quiz.questions[1].id}`)
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(200);
+    expect(
+      await prisma.question.findMany({ where: { quizId: quiz.id }, orderBy: { position: 'asc' } }),
+    ).toMatchObject([{ id: quiz.questions[0].id, position: 0 }]);
+
+    await createResponse(quiz.id, quiz.questions[0].id, quiz.questions[0].choices[0].id, '900001');
+    await request(app.getHttpServer())
+      .delete(`/quizzes/questions/${quiz.questions[0].id}`)
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(200);
+    expect(await prisma.answer.count({ where: { questionId: quiz.questions[0].id } })).toBe(0);
+    expect(await prisma.choice.count({ where: { questionId: quiz.questions[0].id } })).toBe(0);
+
+    const poll = await createActivity('POLL', 'poll');
+    await createResponse(poll.id, poll.questions[0].id, poll.questions[0].choices[0].id, '900002');
+    await request(app.getHttpServer())
+      .delete(`/quizzes/questions/${poll.questions[0].id}`)
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(200);
+    expect(await prisma.answer.count({ where: { questionId: poll.questions[0].id } })).toBe(0);
+
+    const wordCloud = await createActivity('WORD_CLOUD', 'word cloud');
+    const wordRoom = await prisma.room.create({ data: { quizId: wordCloud.id, hostId: owner.id, code: '900003' } });
+    const wordParticipant = await prisma.participant.create({ data: { roomId: wordRoom.id, displayName: 'Word player' } });
+    const entry = await prisma.wordCloudEntry.create({ data: { roomId: wordRoom.id, questionId: wordCloud.questions[0].id, text: 'Cloud', normalizedText: 'cloud' } });
+    await prisma.wordCloudVote.create({ data: { entryId: entry.id, participantId: wordParticipant.id } });
+    await request(app.getHttpServer())
+      .delete(`/quizzes/questions/${wordCloud.questions[0].id}`)
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(200);
+    expect(await prisma.wordCloudEntry.count({ where: { questionId: wordCloud.questions[0].id } })).toBe(0);
+    expect(await prisma.wordCloudVote.count({ where: { entryId: entry.id } })).toBe(0);
+
+    const otherTeacherToken = body<{ accessToken: string }>(
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'e2e+teacher@example.test', name: 'Teacher', password: 'password123' }),
+    ).data.accessToken;
+    const protectedQuiz = await createActivity('QUIZ', 'protected');
+    await request(app.getHttpServer())
+      .delete(`/quizzes/questions/${protectedQuiz.questions[0].id}`)
+      .set('Authorization', `Bearer ${otherTeacherToken}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete('/quizzes/questions/missing-question')
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(404);
+  });
+
+  it('deletes owned activities and all persisted room data', async () => {
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { email: 'e2e+host@example.test' },
+    });
+    const createActivity = async (type: 'QUIZ' | 'POLL' | 'WORD_CLOUD') => {
+      const activity = await prisma.quiz.create({
+        data: {
+          title: `Delete activity ${type}`,
+          type,
+          ownerId: owner.id,
+          questions: {
+            create: {
+              text: 'Question',
+              position: 0,
+              choices: type === 'WORD_CLOUD' ? undefined : {
+                create: [
+                  { text: 'Yes', isCorrect: type === 'QUIZ' },
+                  { text: 'No', isCorrect: false },
+                ],
+              },
+            },
+          },
+        },
+        include: { questions: { include: { choices: true } } },
+      });
+      const room = await prisma.room.create({
+        data: {
+          quizId: activity.id,
+          hostId: owner.id,
+          code: `8${type.length}000${type === 'QUIZ' ? 1 : type === 'POLL' ? 2 : 3}`,
+          ...(type === 'WORD_CLOUD' ? { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED } : {}),
+        },
+      });
+      const participant = await prisma.participant.create({
+        data: { roomId: room.id, displayName: `Player ${type}` },
+      });
+      const attempt = await prisma.quizAttempt.create({
+        data: { roomId: room.id, participantId: participant.id },
+      });
+      if (type === 'WORD_CLOUD') {
+        const entry = await prisma.wordCloudEntry.create({
+          data: { roomId: room.id, questionId: activity.questions[0].id, text: 'Cloud', normalizedText: 'cloud' },
+        });
+        await prisma.wordCloudVote.create({ data: { entryId: entry.id, participantId: participant.id } });
+      } else {
+        await prisma.answer.create({
+          data: { attemptId: attempt.id, questionId: activity.questions[0].id, choiceId: activity.questions[0].choices[0].id, isCorrect: false },
+        });
+      }
+      return { activity, room, participant, attempt };
+    };
+    for (const type of ['QUIZ', 'POLL', 'WORD_CLOUD'] as const) {
+      const created = await createActivity(type);
+      await request(app.getHttpServer())
+        .delete(`/quizzes/${created.activity.id}`)
+        .set('Authorization', `Bearer ${hostToken}`)
+        .expect(200);
+      await expect(prisma.quiz.findUnique({ where: { id: created.activity.id } })).resolves.toBeNull();
+      await expect(prisma.room.findUnique({ where: { id: created.room.id } })).resolves.toBeNull();
+      await expect(prisma.participant.findUnique({ where: { id: created.participant.id } })).resolves.toBeNull();
+      await expect(prisma.quizAttempt.findUnique({ where: { id: created.attempt.id } })).resolves.toBeNull();
+      expect(await prisma.question.count({ where: { quizId: created.activity.id } })).toBe(0);
+      expect(await prisma.choice.count({ where: { questionId: created.activity.questions[0].id } })).toBe(0);
+      expect(await prisma.answer.count({ where: { attemptId: created.attempt.id } })).toBe(0);
+      expect(await prisma.wordCloudEntry.count({ where: { roomId: created.room.id } })).toBe(0);
+      expect(await prisma.wordCloudVote.count({ where: { participantId: created.participant.id } })).toBe(0);
+    }
+    const otherToken = body<{ accessToken: string }>(
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'e2e+delete-other@example.test', name: 'Other', password: 'password123' }),
+    ).data.accessToken;
+    const protectedActivity = await createActivity('QUIZ');
+    await request(app.getHttpServer())
+      .delete(`/quizzes/${protectedActivity.activity.id}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete('/quizzes/missing-activity')
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(404)
+      .expect(({ body }) => expect(body.error.code).toBe('QUIZ_NOT_FOUND'));
+  });
 });

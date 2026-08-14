@@ -25,12 +25,15 @@ export class CreateQuestionDto {
 export class CreateQuizDto {
   @IsString() @MinLength(1) title!: string;
   @IsOptional() @IsString() description?: string;
-  @IsOptional() @IsEnum(ActivityType) type?: ActivityType;
+  @IsEnum(ActivityType) type!: ActivityType;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionDto)
   questions?: CreateQuestionDto[];
 }
-export class UpdateQuizDto extends CreateQuizDto {}
+export class UpdateQuizDto {
+  @IsOptional() @IsString() @MinLength(1) title?: string;
+  @IsOptional() @IsString() description?: string;
+}
 export class UpdateQuestionDto extends CreateQuestionDto {}

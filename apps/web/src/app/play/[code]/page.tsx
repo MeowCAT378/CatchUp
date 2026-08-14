@@ -6,6 +6,7 @@ import { ChartBarIcon, CheckIcon, HeartIcon } from "@heroicons/react/24/outline"
 import { api, type ApiErrorCode } from "@/lib/api";
 import { clearParticipant, participantFor } from "@/lib/participant";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
+import { WordCloudResults } from "@/components/word-cloud-results";
 type State = {
   phase: string;
   activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
@@ -14,7 +15,8 @@ type State = {
     position: number;
     total: number;
     choices: { id: string; text: string }[];
-    entries: { id: string; text: string; votes: number; voted: boolean }[];
+    entries: { id: string; text: string; votes: number; voted: boolean; rank: number }[];
+    totalVotes: number;
   };
   answerSubmitted: boolean;
 };
@@ -114,7 +116,13 @@ export default function Play({
             {t("player.waitingForHost")}
           </section>
         )}
-        {state?.question && (
+        {state?.question && state.phase === "COMPLETED" && state.activityType === "WORD_CLOUD" ? (
+          <section className="panel mt-6">
+            <h1 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">{t("wordCloud.results")}</h1>
+            <p className="mt-3 text-center text-lg font-semibold text-slate-700">{state.question.text}</p>
+            <WordCloudResults entries={state.question.entries} totalVotes={state.question.totalVotes} emptyLabel={t("wordCloud.noEntries")} votesLabel={t("wordCloud.votes")} totalVotesLabel={t("wordCloud.totalVotes")} className="mt-6" />
+          </section>
+        ) : state?.question && (
           <section className="panel mt-6">
             <p className="font-semibold text-sky-700">
               {state.question.position} / {state.question.total}
@@ -159,7 +167,7 @@ export default function Play({
             )}
           </section>
         )}
-        {result && (
+        {result && state?.activityType !== "WORD_CLOUD" && (
           <section className="panel mt-6">
             <h2 className="flex items-center gap-2 text-2xl font-black">
               <ChartBarIcon

@@ -1,8 +1,18 @@
 type Entry = { id: string; text: string; votes: number; rank?: number };
 
-const colors = ["text-neutral-900", "text-neutral-700", "text-slate-600", "text-zinc-600", "text-stone-600"];
+const colors = [
+  "text-neutral-900",
+  "text-neutral-700",
+  "text-slate-600",
+  "text-zinc-600",
+  "text-stone-600",
+];
 
-export function wordCloudFontSize(votes: number, minVotes: number, maxVotes: number) {
+export function wordCloudFontSize(
+  votes: number,
+  minVotes: number,
+  maxVotes: number,
+) {
   if (minVotes === maxVotes) return 48;
   return Math.round(22 + ((votes - minVotes) / (maxVotes - minVotes)) * 54);
 }
@@ -22,19 +32,30 @@ export function WordCloudResults({
   totalVotesLabel: string;
   className?: string;
 }) {
-  const ranked = [...entries].sort((a, b) => b.votes - a.votes || a.text.localeCompare(b.text));
+  const ranked = [...entries].sort(
+    (a, b) => b.votes - a.votes || a.text.localeCompare(b.text),
+  );
   const votes = ranked.map((entry) => entry.votes);
   const minVotes = Math.min(...votes);
   const maxVotes = Math.max(...votes);
-  if (!ranked.length) return <p className="py-16 text-center text-lg font-semibold text-neutral-500">{emptyLabel}</p>;
+  if (!ranked.length)
+    return (
+      <p className="py-16 text-center text-lg font-semibold text-neutral-500">
+        {emptyLabel}
+      </p>
+    );
   return (
     <div className={className}>
-      <p className="text-center font-semibold text-neutral-500">{totalVotesLabel}: {totalVotes}</p>
+      <p className="text-center font-semibold text-neutral-500">
+        {totalVotesLabel}: {totalVotes}
+      </p>
       <div className="mt-5 flex min-h-72 flex-wrap content-center justify-center gap-x-7 gap-y-5 overflow-hidden rounded-3xl bg-neutral-100 p-6 sm:min-h-96 sm:p-10">
         {ranked.map((entry, index) => (
           <span
             key={entry.id}
-            style={{ fontSize: `clamp(22px, calc(6vw + ${wordCloudFontSize(entry.votes, minVotes, maxVotes) / 2}px), ${wordCloudFontSize(entry.votes, minVotes, maxVotes)}px)` }}
+            style={{
+              fontSize: `clamp(22px, calc(6vw + ${wordCloudFontSize(entry.votes, minVotes, maxVotes) / 2}px), ${wordCloudFontSize(entry.votes, minVotes, maxVotes)}px)`,
+            }}
             className={`break-words text-center font-black leading-none ${colors[index % colors.length]}`}
           >
             {entry.text}
@@ -42,7 +63,11 @@ export function WordCloudResults({
         ))}
       </div>
       <ol className="sr-only">
-        {ranked.map((entry, index) => <li key={entry.id}>{index + 1}. {entry.text}: {entry.votes} {votesLabel}</li>)}
+        {ranked.map((entry, index) => (
+          <li key={entry.id}>
+            {index + 1}. {entry.text}: {entry.votes} {votesLabel}
+          </li>
+        ))}
       </ol>
     </div>
   );

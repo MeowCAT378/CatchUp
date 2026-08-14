@@ -48,7 +48,7 @@ export default function JoinPage() {
     }
   }
   return (
-    <main className="page-shell">
+    <main className="page-shell page-shell-join">
       <section className="page-content flex min-h-screen max-w-md flex-col justify-center">
         <BackButton href="/" />
         <div className="panel mt-4 w-full">

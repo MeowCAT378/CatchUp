@@ -46,7 +46,10 @@ export class QuizzesController {
   ) {
     return this.quizzes.update(id, u.sub, dto);
   }
-  @Delete(':id') async remove(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+  @Delete(':id') async remove(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+  ) {
     const deleted = await this.quizzes.remove(id, u.sub);
     this.roomsGateway.activityDeleted(deleted.rooms);
     return { id: deleted.id };

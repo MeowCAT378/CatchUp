@@ -32,18 +32,16 @@ export class ApiExceptionFilter implements ExceptionFilter {
               : status === HttpStatus.UNAUTHORIZED
                 ? 'UNAUTHORIZED'
                 : 'INTERNAL_ERROR';
-    response
-      .status(status)
-      .json({
-        success: false,
-        error: {
-          status,
-          code,
-          message:
-            status === HttpStatus.INTERNAL_SERVER_ERROR
-              ? 'Internal server error'
-              : message,
-        },
-      });
+    response.status(status).json({
+      success: false,
+      error: {
+        status,
+        code,
+        message:
+          status === HttpStatus.INTERNAL_SERVER_ERROR
+            ? 'Internal server error'
+            : message,
+      },
+    });
   }
 }

@@ -99,7 +99,9 @@ export class QuizzesService {
         await tx.quizAttempt.deleteMany({ where: { roomId: { in: roomIds } } });
         await tx.participant.deleteMany({ where: { roomId: { in: roomIds } } });
         await tx.room.deleteMany({ where: { id: { in: roomIds } } });
-        await tx.choice.deleteMany({ where: { questionId: { in: questionIds } } });
+        await tx.choice.deleteMany({
+          where: { questionId: { in: questionIds } },
+        });
         await tx.question.deleteMany({ where: { id: { in: questionIds } } });
         await tx.quiz.delete({ where: { id } });
         return { id, rooms };
@@ -174,12 +176,27 @@ export class QuizzesService {
     const choices = dto.choices ?? [];
     if (type === ActivityType.WORD_CLOUD) {
       if (choices.length)
-        throw new AppError('VALIDATION_ERROR', 400, 'Word clouds do not use choices');
+        throw new AppError(
+          'VALIDATION_ERROR',
+          400,
+          'Word clouds do not use choices',
+        );
       return;
     }
     if (choices.length < 2)
-      throw new AppError('VALIDATION_ERROR', 400, 'Questions need at least two choices');
-    if (type === ActivityType.QUIZ && choices.filter((choice) => choice.isCorrect).length !== 1)
-      throw new AppError('VALIDATION_ERROR', 400, 'Quizzes need exactly one correct choice');
+      throw new AppError(
+        'VALIDATION_ERROR',
+        400,
+        'Questions need at least two choices',
+      );
+    if (
+      type === ActivityType.QUIZ &&
+      choices.filter((choice) => choice.isCorrect).length !== 1
+    )
+      throw new AppError(
+        'VALIDATION_ERROR',
+        400,
+        'Quizzes need exactly one correct choice',
+      );
   }
 }

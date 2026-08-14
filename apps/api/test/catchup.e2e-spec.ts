@@ -303,13 +303,11 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     expect((await revealed).correctChoiceId).toBe(firstQuestion.choices[0].id);
     expect(
       (
-        await request(app.getHttpServer())
-          .post(`/rooms/${code}/answers`)
-          .send({
-            participantId: participant.participantId,
-            participantToken: participant.participantToken,
-            choiceId: firstQuestion.choices[0].id,
-          })
+        await request(app.getHttpServer()).post(`/rooms/${code}/answers`).send({
+          participantId: participant.participantId,
+          participantToken: participant.participantToken,
+          choiceId: firstQuestion.choices[0].id,
+        })
       ).body.error.code,
     ).toBe('INVALID_ROOM_PHASE');
     const next = once<{ question: { position: number } }>(
@@ -433,12 +431,19 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
                 choices:
                   type === 'WORD_CLOUD'
                     ? undefined
-                    : { create: [{ text: 'Only', isCorrect: type === 'QUIZ' }] },
+                    : {
+                        create: [{ text: 'Only', isCorrect: type === 'QUIZ' }],
+                      },
               },
             ],
           },
         },
-        include: { questions: { include: { choices: true }, orderBy: { position: 'asc' } } },
+        include: {
+          questions: {
+            include: { choices: true },
+            orderBy: { position: 'asc' },
+          },
+        },
       });
     const createResponse = async (
       quizId: string,
@@ -446,10 +451,18 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       choiceId: string,
       code: string,
     ) => {
-      const room = await prisma.room.create({ data: { quizId, hostId: owner.id, code, status: 'ACTIVE' } });
-      const participant = await prisma.participant.create({ data: { roomId: room.id, displayName: `Player ${code}` } });
-      const attempt = await prisma.quizAttempt.create({ data: { roomId: room.id, participantId: participant.id } });
-      await prisma.answer.create({ data: { attemptId: attempt.id, questionId, choiceId, isCorrect: false } });
+      const room = await prisma.room.create({
+        data: { quizId, hostId: owner.id, code, status: 'ACTIVE' },
+      });
+      const participant = await prisma.participant.create({
+        data: { roomId: room.id, displayName: `Player ${code}` },
+      });
+      const attempt = await prisma.quizAttempt.create({
+        data: { roomId: room.id, participantId: participant.id },
+      });
+      await prisma.answer.create({
+        data: { attemptId: attempt.id, questionId, choiceId, isCorrect: false },
+      });
     };
 
     const quiz = await createActivity('QUIZ', 'quiz');
@@ -458,41 +471,89 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       .set('Authorization', `Bearer ${hostToken}`)
       .expect(200);
     expect(
-      await prisma.question.findMany({ where: { quizId: quiz.id }, orderBy: { position: 'asc' } }),
+      await prisma.question.findMany({
+        where: { quizId: quiz.id },
+        orderBy: { position: 'asc' },
+      }),
     ).toMatchObject([{ id: quiz.questions[0].id, position: 0 }]);
 
-    await createResponse(quiz.id, quiz.questions[0].id, quiz.questions[0].choices[0].id, '900001');
+    await createResponse(
+      quiz.id,
+      quiz.questions[0].id,
+      quiz.questions[0].choices[0].id,
+      '900001',
+    );
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${quiz.questions[0].id}`)
       .set('Authorization', `Bearer ${hostToken}`)
       .expect(200);
-    expect(await prisma.answer.count({ where: { questionId: quiz.questions[0].id } })).toBe(0);
-    expect(await prisma.choice.count({ where: { questionId: quiz.questions[0].id } })).toBe(0);
+    expect(
+      await prisma.answer.count({
+        where: { questionId: quiz.questions[0].id },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.choice.count({
+        where: { questionId: quiz.questions[0].id },
+      }),
+    ).toBe(0);
 
     const poll = await createActivity('POLL', 'poll');
-    await createResponse(poll.id, poll.questions[0].id, poll.questions[0].choices[0].id, '900002');
+    await createResponse(
+      poll.id,
+      poll.questions[0].id,
+      poll.questions[0].choices[0].id,
+      '900002',
+    );
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${poll.questions[0].id}`)
       .set('Authorization', `Bearer ${hostToken}`)
       .expect(200);
-    expect(await prisma.answer.count({ where: { questionId: poll.questions[0].id } })).toBe(0);
+    expect(
+      await prisma.answer.count({
+        where: { questionId: poll.questions[0].id },
+      }),
+    ).toBe(0);
 
     const wordCloud = await createActivity('WORD_CLOUD', 'word cloud');
-    const wordRoom = await prisma.room.create({ data: { quizId: wordCloud.id, hostId: owner.id, code: '900003' } });
-    const wordParticipant = await prisma.participant.create({ data: { roomId: wordRoom.id, displayName: 'Word player' } });
-    const entry = await prisma.wordCloudEntry.create({ data: { roomId: wordRoom.id, questionId: wordCloud.questions[0].id, text: 'Cloud', normalizedText: 'cloud' } });
-    await prisma.wordCloudVote.create({ data: { entryId: entry.id, participantId: wordParticipant.id } });
+    const wordRoom = await prisma.room.create({
+      data: { quizId: wordCloud.id, hostId: owner.id, code: '900003' },
+    });
+    const wordParticipant = await prisma.participant.create({
+      data: { roomId: wordRoom.id, displayName: 'Word player' },
+    });
+    const entry = await prisma.wordCloudEntry.create({
+      data: {
+        roomId: wordRoom.id,
+        questionId: wordCloud.questions[0].id,
+        text: 'Cloud',
+        normalizedText: 'cloud',
+      },
+    });
+    await prisma.wordCloudVote.create({
+      data: { entryId: entry.id, participantId: wordParticipant.id },
+    });
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${wordCloud.questions[0].id}`)
       .set('Authorization', `Bearer ${hostToken}`)
       .expect(200);
-    expect(await prisma.wordCloudEntry.count({ where: { questionId: wordCloud.questions[0].id } })).toBe(0);
-    expect(await prisma.wordCloudVote.count({ where: { entryId: entry.id } })).toBe(0);
+    expect(
+      await prisma.wordCloudEntry.count({
+        where: { questionId: wordCloud.questions[0].id },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.wordCloudVote.count({ where: { entryId: entry.id } }),
+    ).toBe(0);
 
     const otherTeacherToken = body<{ accessToken: string }>(
       await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email: 'e2e+teacher@example.test', name: 'Teacher', password: 'password123' }),
+        .send({
+          email: 'e2e+teacher@example.test',
+          name: 'Teacher',
+          password: 'password123',
+        }),
     ).data.accessToken;
     const protectedQuiz = await createActivity('QUIZ', 'protected');
     await request(app.getHttpServer())
@@ -519,12 +580,15 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
             create: {
               text: 'Question',
               position: 0,
-              choices: type === 'WORD_CLOUD' ? undefined : {
-                create: [
-                  { text: 'Yes', isCorrect: type === 'QUIZ' },
-                  { text: 'No', isCorrect: false },
-                ],
-              },
+              choices:
+                type === 'WORD_CLOUD'
+                  ? undefined
+                  : {
+                      create: [
+                        { text: 'Yes', isCorrect: type === 'QUIZ' },
+                        { text: 'No', isCorrect: false },
+                      ],
+                    },
             },
           },
         },
@@ -535,7 +599,9 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
           quizId: activity.id,
           hostId: owner.id,
           code: `8${type.length}000${type === 'QUIZ' ? 1 : type === 'POLL' ? 2 : 3}`,
-          ...(type === 'WORD_CLOUD' ? { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED } : {}),
+          ...(type === 'WORD_CLOUD'
+            ? { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED }
+            : {}),
         },
       });
       const participant = await prisma.participant.create({
@@ -546,12 +612,24 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       });
       if (type === 'WORD_CLOUD') {
         const entry = await prisma.wordCloudEntry.create({
-          data: { roomId: room.id, questionId: activity.questions[0].id, text: 'Cloud', normalizedText: 'cloud' },
+          data: {
+            roomId: room.id,
+            questionId: activity.questions[0].id,
+            text: 'Cloud',
+            normalizedText: 'cloud',
+          },
         });
-        await prisma.wordCloudVote.create({ data: { entryId: entry.id, participantId: participant.id } });
+        await prisma.wordCloudVote.create({
+          data: { entryId: entry.id, participantId: participant.id },
+        });
       } else {
         await prisma.answer.create({
-          data: { attemptId: attempt.id, questionId: activity.questions[0].id, choiceId: activity.questions[0].choices[0].id, isCorrect: false },
+          data: {
+            attemptId: attempt.id,
+            questionId: activity.questions[0].id,
+            choiceId: activity.questions[0].choices[0].id,
+            isCorrect: false,
+          },
         });
       }
       return { activity, room, participant, attempt };
@@ -562,20 +640,50 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
         .delete(`/quizzes/${created.activity.id}`)
         .set('Authorization', `Bearer ${hostToken}`)
         .expect(200);
-      await expect(prisma.quiz.findUnique({ where: { id: created.activity.id } })).resolves.toBeNull();
-      await expect(prisma.room.findUnique({ where: { id: created.room.id } })).resolves.toBeNull();
-      await expect(prisma.participant.findUnique({ where: { id: created.participant.id } })).resolves.toBeNull();
-      await expect(prisma.quizAttempt.findUnique({ where: { id: created.attempt.id } })).resolves.toBeNull();
-      expect(await prisma.question.count({ where: { quizId: created.activity.id } })).toBe(0);
-      expect(await prisma.choice.count({ where: { questionId: created.activity.questions[0].id } })).toBe(0);
-      expect(await prisma.answer.count({ where: { attemptId: created.attempt.id } })).toBe(0);
-      expect(await prisma.wordCloudEntry.count({ where: { roomId: created.room.id } })).toBe(0);
-      expect(await prisma.wordCloudVote.count({ where: { participantId: created.participant.id } })).toBe(0);
+      await expect(
+        prisma.quiz.findUnique({ where: { id: created.activity.id } }),
+      ).resolves.toBeNull();
+      await expect(
+        prisma.room.findUnique({ where: { id: created.room.id } }),
+      ).resolves.toBeNull();
+      await expect(
+        prisma.participant.findUnique({
+          where: { id: created.participant.id },
+        }),
+      ).resolves.toBeNull();
+      await expect(
+        prisma.quizAttempt.findUnique({ where: { id: created.attempt.id } }),
+      ).resolves.toBeNull();
+      expect(
+        await prisma.question.count({ where: { quizId: created.activity.id } }),
+      ).toBe(0);
+      expect(
+        await prisma.choice.count({
+          where: { questionId: created.activity.questions[0].id },
+        }),
+      ).toBe(0);
+      expect(
+        await prisma.answer.count({ where: { attemptId: created.attempt.id } }),
+      ).toBe(0);
+      expect(
+        await prisma.wordCloudEntry.count({
+          where: { roomId: created.room.id },
+        }),
+      ).toBe(0);
+      expect(
+        await prisma.wordCloudVote.count({
+          where: { participantId: created.participant.id },
+        }),
+      ).toBe(0);
     }
     const otherToken = body<{ accessToken: string }>(
       await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email: 'e2e+delete-other@example.test', name: 'Other', password: 'password123' }),
+        .send({
+          email: 'e2e+delete-other@example.test',
+          name: 'Other',
+          password: 'password123',
+        }),
     ).data.accessToken;
     const protectedActivity = await createActivity('QUIZ');
     await request(app.getHttpServer())

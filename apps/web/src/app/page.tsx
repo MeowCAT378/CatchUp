@@ -10,7 +10,7 @@ import {
 export default function Home() {
   const { t } = useTranslation();
   return (
-    <main className="page-shell">
+    <main className="page-shell page-shell-hero">
       <div className="page-content flex min-h-screen max-w-5xl items-center">
         <section className="w-full py-10 sm:py-16">
           <p className="badge">CatchUp</p>

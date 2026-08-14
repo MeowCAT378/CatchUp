@@ -1,1 +1,1 @@
-export const pointsForAnswer = (isCorrect: boolean) => isCorrect ? 1000 : 0;
+export const pointsForAnswer = (isCorrect: boolean) => (isCorrect ? 1000 : 0);

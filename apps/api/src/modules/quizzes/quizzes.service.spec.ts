@@ -1,2 +1,16 @@
 import { QuizzesService } from './quizzes.service';
-describe('QuizzesService authorization', () => { it('rejects a teacher modifying another teacher quiz', async () => { const prisma = { quiz: { findUnique: jest.fn().mockResolvedValue({ id: 'q1', ownerId: 'owner' }), update: jest.fn() } }; await expect(new QuizzesService(prisma as never).update('q1', 'other', { title: 'Changed' })).rejects.toMatchObject({ status: 403 }); }); });
+describe('QuizzesService authorization', () => {
+  it('rejects a teacher modifying another teacher quiz', async () => {
+    const prisma = {
+      quiz: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'q1', ownerId: 'owner' }),
+        update: jest.fn(),
+      },
+    };
+    await expect(
+      new QuizzesService(prisma as never).update('q1', 'other', {
+        title: 'Changed',
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+});

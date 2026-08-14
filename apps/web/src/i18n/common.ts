@@ -2,3 +2,5 @@ export const common = {
   th: { common: { language: 'ภาษา', thai: 'ไทย', english: 'English', loading: 'กำลังโหลด…', retry: 'ลองใหม่', back: 'กลับ', create: 'สร้าง', edit: 'แก้ไข', delete: 'ลบ', save: 'บันทึก', connected: 'เชื่อมต่อแล้ว', reconnecting: 'กำลังเชื่อมต่อใหม่', disconnected: 'ตัดการเชื่อมต่อ', roomCode: 'รหัสห้อง', participants: 'ผู้เข้าร่วม', answered: 'ตอบแล้ว', waiting: 'กำลังรอ', cancel: 'ยกเลิก', error: 'เกิดข้อผิดพลาด', name: 'ชื่อ' } },
   en: { common: { language: 'Language', thai: 'ไทย', english: 'English', loading: 'Loading…', retry: 'Retry', back: 'Back', create: 'Create', edit: 'Edit', delete: 'Delete', save: 'Save', connected: 'Connected', reconnecting: 'Reconnecting', disconnected: 'Disconnected', roomCode: 'Room code', participants: 'Participants', answered: 'Answered', waiting: 'Waiting', cancel: 'Cancel', error: 'Error', name: 'Name' } }
 };
+
+common.th.common.back = String.fromCodePoint(0xe22, 0xe49, 0xe2d, 0xe19, 0xe01, 0xe25, 0xe31, 0xe1a);

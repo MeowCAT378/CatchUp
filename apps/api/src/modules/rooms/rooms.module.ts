@@ -1,1 +1,18 @@
-import { Module } from '@nestjs/common'; import { AuthModule } from '../auth/auth.module'; import { RoomsController } from './rooms.controller'; import { RoomsGateway } from './rooms.gateway'; import { RoomExportService } from './room-export.service'; import { RoomResultsService } from './room-results.service'; import { RoomsService } from './rooms.service'; @Module({ imports: [AuthModule], controllers: [RoomsController], providers: [RoomsService, RoomResultsService, RoomExportService, RoomsGateway] }) export class RoomsModule {}
+import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
+import { RoomsController } from './rooms.controller';
+import { RoomsGateway } from './rooms.gateway';
+import { RoomExportService } from './room-export.service';
+import { RoomResultsService } from './room-results.service';
+import { RoomsService } from './rooms.service';
+@Module({
+  imports: [AuthModule],
+  controllers: [RoomsController],
+  providers: [
+    RoomsService,
+    RoomResultsService,
+    RoomExportService,
+    RoomsGateway,
+  ],
+})
+export class RoomsModule {}

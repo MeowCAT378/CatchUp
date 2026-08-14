@@ -6,3 +6,8 @@ export const quiz = {
     myQuizzes: 'My quizzes', newQuiz: 'New quiz title', openRoom: 'Open room', hostControls: 'Host controls', questions: 'questions', question: 'Question', choice: 'Choice', correct: 'Correct answer', addQuestion: 'Add question', quizEmpty: 'No quizzes yet', quizEditor: 'Edit quiz', quizTitle: 'Quiz title', description: 'Description', questionText: 'Question text', choiceNumber: 'Choice {{number}}', markCorrect: 'Mark as correct answer', addQuestionHint: 'Enter a question and all choices', questionEmpty: 'No questions yet', saving: 'Saving…', saved: 'Saved', saveFailed: 'Could not save the quiz', loadFailed: 'Could not load the quiz', deleteQuestion: 'Delete question', deleteQuestionConfirm: 'Delete this question?', cancel: 'Cancel', noDescription: 'No description'
   } }
 };
+
+export const activity = {
+  th: { activity: { title: 'ชื่อ{{type}}', QUIZ: { name: 'แบบทดสอบ', description: 'คำถามแบบมีคำตอบถูก' }, POLL: { name: 'แบบสำรวจ', description: 'สำรวจความคิดเห็น' }, WORD_CLOUD: { name: 'เวิร์ดคลาวด์', description: 'เสนอคำและโหวต' } } },
+  en: { activity: { title: '{{type}} title', QUIZ: { name: 'Quiz', description: 'Questions with correct answers' }, POLL: { name: 'Polling', description: 'Collect opinions' }, WORD_CLOUD: { name: 'Word Cloud', description: 'Suggest and vote on entries' } } },
+};

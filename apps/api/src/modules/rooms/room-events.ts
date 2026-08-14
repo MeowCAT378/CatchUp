@@ -1,3 +1,37 @@
-export const RoomEvents = { join: 'room:join', leave: 'room:leave', quizStart: 'quiz:start', questionStart: 'question:start', answerSubmit: 'answer:submit', questionReveal: 'question:reveal', questionNext: 'question:next', quizComplete: 'quiz:complete', state: 'room:state', participantJoined: 'participant:joined', participantLeft: 'participant:left', quizStarted: 'quiz:started', questionStarted: 'question:started', answerProgress: 'answer:progress', questionRevealed: 'question:revealed', leaderboardUpdated: 'leaderboard:updated', dashboardUpdated: 'dashboard:updated', quizCompleted: 'quiz:completed', error: 'room:error' } as const;
-export type RoomJoinPayload = { code: string; participantId?: string; participantToken?: string };
-export type AnswerSubmitPayload = { code: string; participantId: string; participantToken: string; choiceId: string };
+export const RoomEvents = {
+  join: 'room:join',
+  leave: 'room:leave',
+  quizStart: 'quiz:start',
+  questionStart: 'question:start',
+  answerSubmit: 'answer:submit',
+  wordCloudSubmit: 'wordcloud:submit',
+  wordCloudVote: 'wordcloud:vote',
+  questionReveal: 'question:reveal',
+  questionNext: 'question:next',
+  quizComplete: 'quiz:complete',
+  state: 'room:state',
+  participantJoined: 'participant:joined',
+  participantLeft: 'participant:left',
+  quizStarted: 'quiz:started',
+  questionStarted: 'question:started',
+  answerProgress: 'answer:progress',
+  questionRevealed: 'question:revealed',
+  leaderboardUpdated: 'leaderboard:updated',
+  wordCloudUpdated: 'wordcloud:updated',
+  dashboardUpdated: 'dashboard:updated',
+  quizCompleted: 'quiz:completed',
+  error: 'room:error',
+} as const;
+export type RoomJoinPayload = {
+  code: string;
+  participantId?: string;
+  participantToken?: string;
+};
+export type AnswerSubmitPayload = {
+  code: string;
+  participantId: string;
+  participantToken: string;
+  choiceId: string;
+};
+export type WordCloudSubmitPayload = Omit<AnswerSubmitPayload, 'choiceId'> & { text: string };
+export type WordCloudVotePayload = Omit<AnswerSubmitPayload, 'choiceId'> & { entryId: string };

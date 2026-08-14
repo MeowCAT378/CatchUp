@@ -6,5 +6,5 @@ import { useTranslation } from "react-i18next";
 
 export function TeacherHeader() {
   const { t } = useTranslation();
-  return <header className="absolute left-4 top-4 z-10"><span className="badge">CatchUp</span><button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="btn-secondary ml-3 min-h-10 px-3 py-2 text-sm"><ArrowRightStartOnRectangleIcon className="h-5 w-5" aria-hidden="true" />{t("teacher.logout")}</button></header>;
+  return <header className="fixed left-0 right-0 top-0 z-20 border-b border-black/[0.05] bg-white/80 px-5 py-3 backdrop-blur-xl sm:px-8"><div className="mx-auto flex max-w-7xl items-center justify-between"><a href="/teacher" className="text-lg font-semibold tracking-tight text-[#1d1d1f]">CatchUp</a><button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="btn-secondary min-h-9 px-4 py-1.5 text-xs"><ArrowRightStartOnRectangleIcon className="h-4 w-4" aria-hidden="true" />{t("teacher.logout")}</button></div></header>;
 }

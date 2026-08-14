@@ -1,6 +1,6 @@
 type Entry = { id: string; text: string; votes: number; rank?: number };
 
-const colors = ["text-sky-700", "text-emerald-700", "text-violet-700", "text-cyan-700", "text-indigo-700"];
+const colors = ["text-neutral-900", "text-neutral-700", "text-slate-600", "text-zinc-600", "text-stone-600"];
 
 export function wordCloudFontSize(votes: number, minVotes: number, maxVotes: number) {
   if (minVotes === maxVotes) return 48;
@@ -26,11 +26,11 @@ export function WordCloudResults({
   const votes = ranked.map((entry) => entry.votes);
   const minVotes = Math.min(...votes);
   const maxVotes = Math.max(...votes);
-  if (!ranked.length) return <p className="py-16 text-center text-lg font-semibold text-slate-600">{emptyLabel}</p>;
+  if (!ranked.length) return <p className="py-16 text-center text-lg font-semibold text-neutral-500">{emptyLabel}</p>;
   return (
     <div className={className}>
-      <p className="text-center font-semibold text-slate-600">{totalVotesLabel}: {totalVotes}</p>
-      <div className="mt-5 flex min-h-72 flex-wrap content-center justify-center gap-x-7 gap-y-5 overflow-hidden rounded-3xl bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6 sm:min-h-96 sm:p-10">
+      <p className="text-center font-semibold text-neutral-500">{totalVotesLabel}: {totalVotes}</p>
+      <div className="mt-5 flex min-h-72 flex-wrap content-center justify-center gap-x-7 gap-y-5 overflow-hidden rounded-3xl bg-neutral-100 p-6 sm:min-h-96 sm:p-10">
         {ranked.map((entry, index) => (
           <span
             key={entry.id}

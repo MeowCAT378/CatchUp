@@ -67,12 +67,12 @@ export default function HostRoom({
     <main className="page-shell">
       <div className="page-content">
         <BackButton href="/teacher" />
-        <header className="mt-4 grid gap-6 rounded-3xl bg-gradient-to-br from-sky-500 via-sky-400 to-emerald-400 p-6 text-white shadow-lg md:grid-cols-[1fr_auto] md:p-9">
+        <header className="mt-6 grid gap-6 rounded-3xl bg-[#1d1d1f] p-6 text-white shadow-[0_8px_30px_rgba(0,0,0,0.16)] md:grid-cols-[1fr_auto] md:p-9">
           <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-sky-50">
+            <p className="text-sm font-semibold tracking-wide text-white/60">
               {t("room.liveRoom")} · {t(`common.${connection}`)}
             </p>
-            <h1 className="mt-2 text-5xl font-black tracking-wider sm:text-7xl">
+            <h1 className="mt-2 text-5xl font-semibold tracking-tight sm:text-7xl">
               {code}
             </h1>
             <p className="mt-4 text-lg font-semibold">
@@ -90,7 +90,7 @@ export default function HostRoom({
               </a>
             )}
           </div>
-          <div className="mx-auto rounded-2xl bg-white p-4 text-slate-900 shadow-md">
+          <div className="mx-auto rounded-2xl bg-white p-4 text-[#1d1d1f] shadow-md">
             <QRCodeSVG value={joinUrl || `/play/${code}`} size={190} />
             <p className="mt-2 text-center font-bold">
               {t("room.qrJoin")}: {code}
@@ -99,7 +99,7 @@ export default function HostRoom({
         </header>
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="panel">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-semibold tracking-tight text-[#1d1d1f]">
               {data?.state.question?.text ?? t("room.waitingToStart")}
             </h2>
             <p className="mt-3 badge">
@@ -142,15 +142,15 @@ export default function HostRoom({
             </div>}
           </div>
           <div className="panel">
-            <h2 className="flex items-center gap-2 text-xl font-bold">
-              <UsersIcon className="h-5 w-5 text-sky-700" aria-hidden="true" />
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
+              <UsersIcon className="h-5 w-5 text-neutral-600" aria-hidden="true" />
               {t("common.participants")}
             </h2>
             <div className="mt-4 grid gap-2">
               {data?.participants.map((p) => (
                 <p
                   key={p.id}
-                  className="flex justify-between rounded-xl bg-sky-50 px-3 py-2"
+                  className="flex justify-between rounded-xl bg-neutral-100 px-3 py-2"
                 >
                   <span className="font-medium">{p.name}</span>
                   <span

@@ -102,25 +102,26 @@ export default function TeacherClient({ token }: { token: string }) {
   }
   return (
     <main className="page-shell">
-      <div className="page-content max-w-4xl">
+      <div className="page-content max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="mt-3 text-4xl font-black text-slate-900">
+            <p className="text-sm font-medium text-neutral-500">CatchUp</p>
+            <h1 className="mt-1 text-4xl font-semibold tracking-tight text-[#1d1d1f] sm:text-5xl">
               {t("quiz.myQuizzes")}
             </h1>
           </div>
         </div>
-        <section className="panel mt-7">
+        <section className="panel mt-8">
           {!type ? <div className="grid gap-3 sm:grid-cols-3">
             {([
               ["QUIZ", QuestionMarkCircleIcon],
               ["POLL", ChartBarIcon],
               ["WORD_CLOUD", ChatBubbleLeftRightIcon],
             ] as const).map(([activityType, Icon]) => (
-              <button key={activityType} type="button" onClick={() => setType(activityType)} className="soft-card text-left transition hover:border-sky-400 hover:bg-sky-50">
-                <Icon className="h-7 w-7 text-sky-700" aria-hidden="true" />
-                <strong className="mt-3 block text-lg text-slate-900">{t(`activity.${activityType}.name`)}</strong>
-                <span className="mt-1 block text-sm text-slate-600">{t(`activity.${activityType}.description`)}</span>
+              <button key={activityType} type="button" onClick={() => setType(activityType)} className="soft-card text-left hover:-translate-y-0.5">
+                <Icon className="h-7 w-7 text-neutral-700" aria-hidden="true" />
+                <strong className="mt-3 block text-lg text-[#1d1d1f]">{t(`activity.${activityType}.name`)}</strong>
+                <span className="mt-1 block text-sm text-neutral-500">{t(`activity.${activityType}.description`)}</span>
               </button>
             ))}
           </div> : <form className="flex flex-col gap-3 sm:flex-row" onSubmit={create} noValidate>
@@ -159,14 +160,14 @@ export default function TeacherClient({ token }: { token: string }) {
             </p>
           )}
         </section>
-        <ul className="mt-6 grid gap-4">
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2">
           {quizzes.length ? (
             quizzes.map((quiz) => (
               <li
                 key={quiz.id}
-                className="soft-card flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+                className="soft-card flex min-h-48 flex-col justify-between gap-5"
               >
-                <span className="text-lg font-bold text-slate-900">
+                <span className="text-lg font-semibold text-[#1d1d1f]">
                   {quiz.title}{" "}
                   <span className="font-medium text-slate-500">
                     ({quiz._count.questions} {t("quiz.questions")})
@@ -202,7 +203,7 @@ export default function TeacherClient({ token }: { token: string }) {
               </li>
             ))
           ) : (
-            <li className="panel text-center text-slate-500">
+            <li className="panel text-center text-neutral-500 sm:col-span-2">
               {t("quiz.quizEmpty")}
             </li>
           )}

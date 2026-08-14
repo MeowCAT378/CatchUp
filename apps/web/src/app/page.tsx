@@ -11,13 +11,13 @@ export default function Home() {
   const { t } = useTranslation();
   return (
     <main className="page-shell">
-      <div className="page-content flex min-h-screen max-w-4xl items-center">
-        <section className="panel w-full py-10 sm:p-12">
+      <div className="page-content flex min-h-screen max-w-5xl items-center">
+        <section className="w-full py-10 sm:py-16">
           <p className="badge">CatchUp</p>
-          <h1 className="mt-5 max-w-2xl text-4xl font-black tracking-tight text-slate-900 sm:text-6xl">
+          <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-tight text-[#1d1d1f] sm:text-7xl">
             {t("room.landingTitle")}
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+          <p className="mt-6 max-w-xl text-lg leading-8 text-neutral-500">
             {t("room.landingSubtitle")}
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">

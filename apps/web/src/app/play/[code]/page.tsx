@@ -108,11 +108,11 @@ export default function Play({
   return (
     <main className="page-shell">
       <div className="page-content max-w-3xl">
-        <p className="badge">
+        <p className="badge text-xs">
           {t("common.roomCode")} {code}
         </p>
         {state?.phase === "WAITING" && (
-          <section className="panel mt-6 text-center text-xl font-semibold text-slate-700">
+          <section className="panel mt-8 py-12 text-center text-xl font-semibold text-neutral-600">
             {t("player.waitingForHost")}
           </section>
         )}
@@ -123,11 +123,11 @@ export default function Play({
             <WordCloudResults entries={state.question.entries} totalVotes={state.question.totalVotes} emptyLabel={t("wordCloud.noEntries")} votesLabel={t("wordCloud.votes")} totalVotesLabel={t("wordCloud.totalVotes")} className="mt-6" />
           </section>
         ) : state?.question && (
-          <section className="panel mt-6">
-            <p className="font-semibold text-sky-700">
+          <section className="panel mt-8 sm:p-10">
+            <p className="font-semibold text-neutral-500">
               {state.question.position} / {state.question.total}
             </p>
-            <h1 className="mt-3 text-3xl font-black leading-tight text-slate-900 sm:text-5xl">
+            <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-[#1d1d1f] sm:text-5xl">
               {state.question.text}
             </h1>
             {state.phase === "ACTIVE" && state.activityType !== "WORD_CLOUD" && (
@@ -137,7 +137,7 @@ export default function Play({
                     disabled={state.answerSubmitted || submitting}
                     key={choice.id}
                     onClick={() => answer(choice.id)}
-                    className="min-h-16 rounded-2xl border border-sky-200 bg-white p-5 text-left text-lg font-bold shadow-sm transition hover:border-sky-400 hover:bg-sky-50 disabled:opacity-50"
+                    className="min-h-18 rounded-2xl border border-black/[0.06] bg-white p-5 text-left text-lg font-semibold shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-neutral-50 disabled:opacity-50"
                   >
                     {choice.text}
                   </button>
@@ -152,7 +152,7 @@ export default function Play({
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
                   {state.question.entries.map((entry) => (
-                    <button key={entry.id} disabled={entry.voted || submitting} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} style={{ fontSize: `${18 + (46 * entry.votes) / Math.max(1, ...state.question!.entries.map((x) => x.votes))}px` }} className="rounded-2xl bg-sky-50 px-4 py-3 font-bold text-slate-900 disabled:opacity-50">
+                    <button key={entry.id} disabled={entry.voted || submitting} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} style={{ fontSize: `${18 + (46 * entry.votes) / Math.max(1, ...state.question!.entries.map((x) => x.votes))}px` }} className="rounded-2xl bg-neutral-100 px-4 py-3 font-semibold text-[#1d1d1f] disabled:opacity-50">
                       {entry.text} <HeartIcon className="inline h-5 w-5" aria-hidden="true" /> {entry.votes}
                     </button>
                   ))}
@@ -160,7 +160,7 @@ export default function Play({
               </div>
             )}
             {state.answerSubmitted && (
-              <p className="mt-5 rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-800">
+              <p className="mt-5 rounded-2xl bg-neutral-100 p-4 font-semibold text-[#1d1d1f]">
                 <CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />
                 {t("player.answerRecorded")}
               </p>
@@ -168,8 +168,8 @@ export default function Play({
           </section>
         )}
         {result && state?.activityType !== "WORD_CLOUD" && (
-          <section className="panel mt-6">
-            <h2 className="flex items-center gap-2 text-2xl font-black">
+          <section className="panel mt-8">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               <ChartBarIcon
                 className="h-6 w-6 text-sky-700"
                 aria-hidden="true"
@@ -180,7 +180,7 @@ export default function Play({
               {result.leaderboard.map((x) => (
                 <li
                   key={x.rank}
-                  className="rounded-xl bg-sky-50 p-3 font-semibold"
+                  className="rounded-2xl bg-neutral-100 p-4 font-semibold"
                 >
                   {x.rank}. {x.displayName}: {x.score}
                 </li>

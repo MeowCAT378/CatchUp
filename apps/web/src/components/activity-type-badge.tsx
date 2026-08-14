@@ -6,9 +6,9 @@ import { useTranslation } from "react-i18next";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 
 const styles = {
-  QUIZ: [QuestionMarkCircleIcon, "bg-sky-100 text-sky-800"],
-  POLL: [ChartBarIcon, "bg-emerald-100 text-emerald-800"],
-  WORD_CLOUD: [ChatBubbleLeftRightIcon, "bg-violet-100 text-violet-800"],
+  QUIZ: [QuestionMarkCircleIcon, "bg-neutral-100 text-neutral-700"],
+  POLL: [ChartBarIcon, "bg-neutral-100 text-neutral-700"],
+  WORD_CLOUD: [ChatBubbleLeftRightIcon, "bg-neutral-100 text-neutral-700"],
 } as const;
 
 export function ActivityTypeBadge({ type }: { type: ActivityType }) {

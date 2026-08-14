@@ -96,12 +96,12 @@ export default function QuizEditor({
     <main className="page-shell">
       <div className="page-content max-w-3xl">
         <BackButton href="/teacher" />
-        <h1 className="mt-4 text-4xl font-black text-slate-900">
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-[#1d1d1f] sm:text-5xl">
           {quiz?.title ?? t("quiz.quizEditor")}
         </h1>
         {quiz && <div className="mt-3"><ActivityTypeBadge type={quiz.type} /></div>}
         <section className="panel mt-6">
-          <h2 className="text-xl font-bold">{t("quiz.addQuestion")}</h2>
+          <h2 className="text-xl font-semibold">{t("quiz.addQuestion")}</h2>
           <label
             className="mt-4 block text-sm font-semibold"
             htmlFor="question-text"
@@ -144,7 +144,7 @@ export default function QuizEditor({
               />
             </div>
           ))}
-          {quiz?.type === "QUIZ" && <p className="mt-3 flex items-center gap-1 text-sm text-emerald-700">
+          {quiz?.type === "QUIZ" && <p className="mt-3 flex items-center gap-1 text-sm text-neutral-500">
             <CheckIcon className="h-4 w-4" aria-hidden="true" />
             {t("quiz.markCorrect")}
           </p>}
@@ -171,15 +171,15 @@ export default function QuizEditor({
             {quiz.questions.length ? (
               quiz.questions.map((question) => (
                 <li key={question.id} className="soft-card">
-                  <div className="flex items-start justify-between gap-3"><strong className="text-lg text-slate-900">{question.text}</strong><button type="button" disabled={Boolean(deleting)} onClick={() => setConfirming(question.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><TrashIcon className="h-5 w-5" aria-hidden="true" />{t("quiz.deleteQuestion")}</button></div>
+                  <div className="flex items-start justify-between gap-3"><strong className="text-lg font-semibold text-[#1d1d1f]">{question.text}</strong><button type="button" disabled={Boolean(deleting)} onClick={() => setConfirming(question.id)} className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><TrashIcon className="h-5 w-5" aria-hidden="true" />{t("quiz.deleteQuestion")}</button></div>
                   {quiz.type !== "WORD_CLOUD" && <ul className="mt-3 grid gap-2">
                     {question.choices.map((choice) => (
                       <li
                         key={choice.id}
                         className={
                           quiz.type === "QUIZ" && choice.isCorrect
-                            ? "rounded-xl bg-emerald-50 px-3 py-2 text-emerald-900"
-                            : "rounded-xl bg-sky-50 px-3 py-2"
+                            ? "rounded-xl bg-neutral-200 px-3 py-2 text-[#1d1d1f]"
+                            : "rounded-xl bg-neutral-100 px-3 py-2"
                         }
                       >
                         {choice.text}

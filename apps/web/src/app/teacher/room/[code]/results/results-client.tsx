@@ -216,7 +216,7 @@ export default function ResultsClient({
                       </div>
                       <div className="h-2 rounded bg-slate-100">
                         <div
-                          className="h-2 rounded bg-indigo-500"
+                          className="h-2 rounded bg-teal-500"
                           style={{
                             width: `${question.responseCount ? (choice.count / question.responseCount) * 100 : 0}%`,
                           }}

@@ -24,11 +24,12 @@ export default function RegisterPage() {
           password: form.get("password"),
         }),
       });
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email: form.get("email"),
         password: form.get("password"),
         redirect: false,
       });
+      if (result?.error) throw new ApiError("UNAUTHORIZED");
       router.push("/teacher");
     } catch (e) {
       setError(

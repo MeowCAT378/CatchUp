@@ -20,7 +20,8 @@
     "seed": "prisma db seed",
     "test:e2e:setup": "node scripts/test-db.cjs migrate",
     "test:e2e": "node scripts/test-db.cjs test",
-    "test:e2e:browser": "node scripts/browser-e2e.cjs"
+    "test:e2e:browser": "node scripts/browser-e2e.cjs",
+    "test:e2e:browser:activity": "node scripts/activity-delete-browser-e2e.cjs"
   },
   "prisma": {
     "seed": "node prisma/seed.cjs"

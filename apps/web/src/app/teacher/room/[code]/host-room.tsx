@@ -12,14 +12,16 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
-import { api } from "@/lib/api";
+import { api, ApiError, type ApiErrorCode } from "@/lib/api";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
+import { WordCloudResults } from "@/components/word-cloud-results";
 
 type Dashboard = {
   state: {
     phase: "WAITING" | "ACTIVE" | "REVEALED" | "COMPLETED";
     activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
-    question: null | { text: string };
+    actions: { canStart: boolean; canReveal: boolean; canAdvance: boolean; canComplete: boolean };
+    question: null | { text: string; entries: { id: string; text: string; votes: number; rank: number }[]; totalVotes: number };
   };
   participants: { id: string; name: string; status: string }[];
   progress: { submitted: number; participants: number };
@@ -46,32 +48,42 @@ export default function HostRoom({
   const [data, setData] = useState<Dashboard>();
   const [joinUrl, setJoinUrl] = useState("");
   const [connection, setConnection] = useState("reconnecting");
+  const [error, setError] = useState("");
   useEffect(() => {
-    setJoinUrl(`${window.location.origin}/play/${code}`);
-    api<Dashboard>(`/rooms/${code}/dashboard`, {}, token).then(setData);
+    api<Dashboard>(`/rooms/${code}/dashboard`, {}, token)
+      .then(setData)
+      .catch((reason) =>
+        setError(
+          t(`errors.${reason instanceof ApiError ? reason.code : "REQUEST_FAILED"}`),
+        ),
+      );
     socket.current = roomSocket(token);
     socket.current.on("connect", () => {
+      setJoinUrl(`${window.location.origin}/play/${code}`);
       setConnection("connected");
       socket.current?.emit(RoomEvents.join, { code });
     });
     socket.current.on("disconnect", () => setConnection("reconnecting"));
     socket.current.on(RoomEvents.dashboardUpdated, setData);
+    socket.current.on(RoomEvents.error, (payload: { code?: ApiErrorCode }) =>
+      setError(t(`errors.${payload.code ?? "REQUEST_FAILED"}`)),
+    );
     return () => {
       socket.current?.disconnect();
     };
-  }, [code, token]);
+  }, [code, t, token]);
   const phase = data?.state.phase ?? "WAITING";
   const emit = (event: string) => socket.current?.emit(event, { code });
   return (
     <main className="page-shell">
       <div className="page-content">
         <BackButton href="/teacher" />
-        <header className="mt-4 grid gap-6 rounded-3xl bg-gradient-to-br from-sky-500 via-sky-400 to-emerald-400 p-6 text-white shadow-lg md:grid-cols-[1fr_auto] md:p-9">
+        <header className="mt-6 grid gap-6 rounded-3xl bg-[#1d1d1f] p-6 text-white shadow-[0_8px_30px_rgba(0,0,0,0.16)] md:grid-cols-[1fr_auto] md:p-9">
           <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-sky-50">
+            <p className="text-sm font-semibold tracking-wide text-white/60">
               {t("room.liveRoom")} · {t(`common.${connection}`)}
             </p>
-            <h1 className="mt-2 text-5xl font-black tracking-wider sm:text-7xl">
+            <h1 className="mt-2 text-5xl font-semibold tracking-tight sm:text-7xl">
               {code}
             </h1>
             <p className="mt-4 text-lg font-semibold">
@@ -79,7 +91,7 @@ export default function HostRoom({
               {t("common.connected")} / {data?.participants.length ?? 0}{" "}
               {t("common.participants")}
             </p>
-            {phase === "COMPLETED" && (
+            {phase === "COMPLETED" && data?.state.activityType !== "WORD_CLOUD" && (
               <a
                 href={`/teacher/room/${code}/results`}
                 className="btn-secondary mt-5 border-white bg-white text-sky-800"
@@ -89,67 +101,64 @@ export default function HostRoom({
               </a>
             )}
           </div>
-          <div className="mx-auto rounded-2xl bg-white p-4 text-slate-900 shadow-md">
+          <div className="mx-auto rounded-2xl bg-white p-4 text-[#1d1d1f] shadow-md">
             <QRCodeSVG value={joinUrl || `/play/${code}`} size={190} />
             <p className="mt-2 text-center font-bold">
               {t("room.qrJoin")}: {code}
             </p>
           </div>
         </header>
+        {error && <p role="alert" className="alert-error mt-5">{error}</p>}
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="panel">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-semibold tracking-tight text-[#1d1d1f]">
               {data?.state.question?.text ?? t("room.waitingToStart")}
             </h2>
             <p className="mt-3 badge">
               {data?.progress.submitted ?? 0} /{" "}
-              {data?.progress.participants ?? 0} {t("common.answered")}
+              {data?.progress.participants ?? 0} {data?.state.activityType === "WORD_CLOUD" ? t("wordCloud.addResponse") : t("common.answered")}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                disabled={phase !== "WAITING"}
+              {data?.state.actions.canStart && <button
                 onClick={() => emit(RoomEvents.quizStart)}
                 className="btn-primary"
               >
                 <PlayIcon className="h-5 w-5" aria-hidden="true" />
                 {t("room.start")}
-              </button>
-              <button
-                disabled={phase !== "ACTIVE"}
+              </button>}
+              {data?.state.actions.canReveal && <button
                 onClick={() => emit(RoomEvents.questionReveal)}
                 className="btn-secondary"
               >
                 <EyeIcon className="h-5 w-5" aria-hidden="true" />
                 {t("room.reveal")}
-              </button>
-              <button
-                disabled={phase !== "REVEALED"}
+              </button>}
+              {data?.state.actions.canAdvance && <button
                 onClick={() => emit(RoomEvents.questionNext)}
                 className="btn-secondary"
               >
                 <ArrowRightIcon className="h-5 w-5" aria-hidden="true" />
                 {t("room.next")}
-              </button>
-              <button
-                disabled={phase === "COMPLETED"}
+              </button>}
+              {data?.state.actions.canComplete && <button
                 onClick={() => emit(RoomEvents.quizComplete)}
                 className="btn-secondary border-red-200 text-red-700 hover:bg-red-50"
               >
                 <StopIcon className="h-5 w-5" aria-hidden="true" />
                 {t("room.complete")}
-              </button>
+              </button>}
             </div>
           </div>
           <div className="panel">
-            <h2 className="flex items-center gap-2 text-xl font-bold">
-              <UsersIcon className="h-5 w-5 text-sky-700" aria-hidden="true" />
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
+              <UsersIcon className="h-5 w-5 text-neutral-600" aria-hidden="true" />
               {t("common.participants")}
             </h2>
             <div className="mt-4 grid gap-2">
               {data?.participants.map((p) => (
                 <p
                   key={p.id}
-                  className="flex justify-between rounded-xl bg-sky-50 px-3 py-2"
+                  className="flex justify-between rounded-xl bg-neutral-100 px-3 py-2"
                 >
                   <span className="font-medium">{p.name}</span>
                   <span
@@ -168,7 +177,13 @@ export default function HostRoom({
             </div>
           </div>
         </section>
-        {(data?.state.activityType === "WORD_CLOUD" || phase === "REVEALED" || phase === "COMPLETED") && (
+        {data?.state.activityType === "WORD_CLOUD" && phase === "COMPLETED" ? (
+          <section className="panel mt-6">
+            <h2 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">{t("wordCloud.results")}</h2>
+            <p className="mt-3 text-center text-lg font-semibold text-slate-700">{data.state.question?.text}</p>
+            <WordCloudResults entries={data.state.question?.entries ?? data.entries} totalVotes={data.state.question?.totalVotes ?? data.entries.reduce((total, entry) => total + entry.votes, 0)} emptyLabel={t("wordCloud.noEntries")} votesLabel={t("wordCloud.votes")} totalVotesLabel={t("wordCloud.totalVotes")} className="mt-6" />
+          </section>
+        ) : (data?.state.activityType === "WORD_CLOUD" || phase === "REVEALED" || phase === "COMPLETED") && (
           <section className="mt-6 grid gap-6 md:grid-cols-2">
             <div className="panel">
               <h2 className="text-xl font-bold">{t("room.distribution")}</h2>
@@ -188,17 +203,17 @@ export default function HostRoom({
                 </p>
               ))}
             </div>
-            <div className="panel">
+            {data?.state.activityType === "QUIZ" && <div className="panel">
               <h2 className="text-xl font-bold">{t("room.leaderboard")}</h2>
               {data?.leaderboard.map((x) => (
                 <p
-                  key={x.rank}
+                  key={`${x.rank}-${x.displayName}`}
                   className="mt-3 rounded-xl bg-sky-50 p-3 font-semibold"
                 >
                   {x.rank}. {x.displayName}: {x.score}
                 </p>
               ))}
-            </div>
+            </div>}
           </section>
         )}
       </div>

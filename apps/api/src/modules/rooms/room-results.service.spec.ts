@@ -1,4 +1,4 @@
-import { RoomPhase, RoomStatus } from '@prisma/client';
+import { ActivityType, RoomPhase, RoomStatus } from '@prisma/client';
 import { RoomResultsService } from './room-results.service';
 const room = {
   id: 'r1',
@@ -8,6 +8,7 @@ const room = {
   phase: RoomPhase.ACTIVE,
   quiz: {
     title: 'ไทย Quiz',
+    type: ActivityType.QUIZ,
     questions: [
       {
         id: 'q1',

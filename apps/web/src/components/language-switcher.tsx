@@ -11,21 +11,21 @@ export function LanguageSwitcher() {
   };
   return (
     <div
-      className="inline-flex items-center gap-1 rounded border bg-white p-1 text-slate-900"
+      className="inline-flex items-center gap-1 rounded border border-white/70 bg-white/60 p-1 text-slate-900 shadow-sm backdrop-blur-xl"
       aria-label={t("common.language")}
     >
       <LanguageIcon className="h-4 w-4 text-sky-700" aria-hidden="true" />
       <button
         type="button"
         onClick={() => setLanguage("th")}
-        className={`rounded px-2 py-1 focus-visible:outline-2 ${i18n.language === "th" ? "bg-indigo-600 text-white" : ""}`}
+        className={`rounded px-2 py-1 focus-visible:outline-2 ${i18n.language === "th" ? "bg-sky-600 text-white" : ""}`}
       >
         ไทย
       </button>
       <button
         type="button"
         onClick={() => setLanguage("en")}
-        className={`rounded px-2 py-1 focus-visible:outline-2 ${i18n.language === "en" ? "bg-indigo-600 text-white" : ""}`}
+        className={`rounded px-2 py-1 focus-visible:outline-2 ${i18n.language === "en" ? "bg-sky-600 text-white" : ""}`}
       >
         EN
       </button>

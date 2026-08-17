@@ -1,11 +1,8 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AppError } from '../../common/app-error';
 import { LoginDto, RegisterDto } from './dto';
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 @Injectable()
@@ -17,7 +14,7 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const email = normalizeEmail(dto.email);
     if (await this.prisma.user.findUnique({ where: { email } }))
-      throw new ConflictException('Email is already registered');
+      throw new AppError('EMAIL_IN_USE', 409, 'Email is already registered');
     const user = await this.prisma.user.create({
       data: {
         email,

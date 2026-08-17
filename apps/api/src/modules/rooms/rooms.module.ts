@@ -14,5 +14,6 @@ import { RoomsService } from './rooms.service';
     RoomExportService,
     RoomsGateway,
   ],
+  exports: [RoomsGateway],
 })
 export class RoomsModule {}

@@ -33,5 +33,9 @@ export type AnswerSubmitPayload = {
   participantToken: string;
   choiceId: string;
 };
-export type WordCloudSubmitPayload = Omit<AnswerSubmitPayload, 'choiceId'> & { text: string };
-export type WordCloudVotePayload = Omit<AnswerSubmitPayload, 'choiceId'> & { entryId: string };
+export type WordCloudSubmitPayload = Omit<AnswerSubmitPayload, 'choiceId'> & {
+  text: string;
+};
+export type WordCloudVotePayload = Omit<AnswerSubmitPayload, 'choiceId'> & {
+  entryId: string;
+};

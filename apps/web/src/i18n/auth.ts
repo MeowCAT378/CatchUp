@@ -1,1 +1,28 @@
-export const auth = { th: { auth: { login: 'เข้าสู่ระบบ', register: 'สร้างบัญชีผู้สอน', email: 'อีเมล', password: 'รหัสผ่าน', name: 'ชื่อ', signIn: 'เข้าสู่ระบบ', createAccount: 'สร้างบัญชี', invalidCredentials: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง', registerFailed: 'ไม่สามารถสร้างบัญชีได้' } }, en: { auth: { login: 'Sign in', register: 'Create teacher account', email: 'Email', password: 'Password', name: 'Name', signIn: 'Sign in', createAccount: 'Create account', invalidCredentials: 'Invalid email or password', registerFailed: 'Could not create account' } } };
+export const auth = {
+  th: {
+    auth: {
+      login: "เข้าสู่ระบบ",
+      register: "สร้างบัญชีผู้สอน",
+      email: "อีเมล",
+      password: "รหัสผ่าน",
+      name: "ชื่อ",
+      signIn: "เข้าสู่ระบบ",
+      createAccount: "สร้างบัญชี",
+      invalidCredentials: "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+      registerFailed: "ไม่สามารถสร้างบัญชีได้",
+    },
+  },
+  en: {
+    auth: {
+      login: "Sign in",
+      register: "Create teacher account",
+      email: "Email",
+      password: "Password",
+      name: "Name",
+      signIn: "Sign in",
+      createAccount: "Create account",
+      invalidCredentials: "Invalid email or password",
+      registerFailed: "Could not create account",
+    },
+  },
+};

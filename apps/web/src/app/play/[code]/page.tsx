@@ -6,15 +6,18 @@ import { ChartBarIcon, CheckIcon, HeartIcon } from "@heroicons/react/24/outline"
 import { api, type ApiErrorCode } from "@/lib/api";
 import { clearParticipant, participantFor } from "@/lib/participant";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
+import { WordCloudResults } from "@/components/word-cloud-results";
 type State = {
   phase: string;
+  correctChoiceId?: string | null;
   activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
   question: null | {
     text: string;
     position: number;
     total: number;
     choices: { id: string; text: string }[];
-    entries: { id: string; text: string; votes: number; voted: boolean }[];
+    entries: { id: string; text: string; votes: number; voted: boolean; rank: number }[];
+    totalVotes: number;
   };
   answerSubmitted: boolean;
 };
@@ -35,6 +38,8 @@ export default function Play({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [word, setWord] = useState("");
+  const [wordSubmitted, setWordSubmitted] = useState(false);
+  const pendingWordSubmit = useRef(false);
   useEffect(() => {
     params.then(async ({ code }) => {
       const participant = participantFor(code);
@@ -67,6 +72,8 @@ export default function Play({
       socket.current.on(RoomEvents.questionRevealed, setState);
       socket.current.on(RoomEvents.wordCloudUpdated, (next: State) => {
         setState(next);
+        if (pendingWordSubmit.current) setWordSubmitted(true);
+        pendingWordSubmit.current = false;
         setSubmitting(false);
       });
       socket.current.on(RoomEvents.leaderboardUpdated, setResult);
@@ -74,6 +81,7 @@ export default function Play({
       socket.current.on(RoomEvents.error, (x: { code?: ApiErrorCode }) => {
         const errorCode = x.code ?? "REQUEST_FAILED";
         setError(t(`errors.${errorCode}`));
+        pendingWordSubmit.current = false;
         setSubmitting(false);
         if (errorCode === "PARTICIPANT_NOT_FOUND") {
           clearParticipant(code);
@@ -84,7 +92,7 @@ export default function Play({
     return () => {
       socket.current?.disconnect();
     };
-  }, [router, t]);
+  }, [params, router, t]);
   const answer = (choiceId: string) => {
     const participant = participantFor(code);
     if (!participant || submitting) return;
@@ -101,35 +109,44 @@ export default function Play({
     if (!participant || submitting) return;
     setSubmitting(true);
     socket.current?.emit(event, { code, participantId: participant.id, participantToken: participant.token, ...value });
-    if (event === RoomEvents.wordCloudSubmit) setWord("");
+    if (event === RoomEvents.wordCloudSubmit) {
+      pendingWordSubmit.current = true;
+      setWord("");
+    }
   };
   return (
     <main className="page-shell">
       <div className="page-content max-w-3xl">
-        <p className="badge">
+        <p className="badge text-xs">
           {t("common.roomCode")} {code}
         </p>
         {state?.phase === "WAITING" && (
-          <section className="panel mt-6 text-center text-xl font-semibold text-slate-700">
+          <section className="panel mt-8 py-12 text-center text-xl font-semibold text-neutral-600">
             {t("player.waitingForHost")}
           </section>
         )}
-        {state?.question && (
+        {state?.question && state.phase === "COMPLETED" && state.activityType === "WORD_CLOUD" ? (
           <section className="panel mt-6">
-            <p className="font-semibold text-sky-700">
+            <h1 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">{t("wordCloud.results")}</h1>
+            <p className="mt-3 text-center text-lg font-semibold text-slate-700">{state.question.text}</p>
+            <WordCloudResults entries={state.question.entries} totalVotes={state.question.totalVotes} emptyLabel={t("wordCloud.noEntries")} votesLabel={t("wordCloud.votes")} totalVotesLabel={t("wordCloud.totalVotes")} className="mt-6" />
+          </section>
+        ) : state?.question && state.phase !== "COMPLETED" && (
+          <section className="panel mt-8 sm:p-10">
+            <p className="font-semibold text-neutral-500">
               {state.question.position} / {state.question.total}
             </p>
-            <h1 className="mt-3 text-3xl font-black leading-tight text-slate-900 sm:text-5xl">
+            <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-[#1d1d1f] sm:text-5xl">
               {state.question.text}
             </h1>
-            {state.phase === "ACTIVE" && state.activityType !== "WORD_CLOUD" && (
+            {(state.phase === "ACTIVE" || state.phase === "REVEALED") && state.activityType !== "WORD_CLOUD" && (
               <div className="mt-7 grid gap-3">
                 {state.question.choices.map((choice) => (
                   <button
-                    disabled={state.answerSubmitted || submitting}
+                    disabled={state.phase !== "ACTIVE" || state.answerSubmitted || submitting}
                     key={choice.id}
                     onClick={() => answer(choice.id)}
-                    className="min-h-16 rounded-2xl border border-sky-200 bg-white p-5 text-left text-lg font-bold shadow-sm transition hover:border-sky-400 hover:bg-sky-50 disabled:opacity-50"
+                    className={`min-h-18 rounded-2xl border p-5 text-left text-lg font-semibold shadow-sm transition duration-200 ${state.phase === "REVEALED" && choice.id === state.correctChoiceId ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-black/[0.06] bg-white hover:-translate-y-0.5 hover:bg-neutral-50"} disabled:opacity-70`}
                   >
                     {choice.text}
                   </button>
@@ -144,24 +161,28 @@ export default function Play({
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
                   {state.question.entries.map((entry) => (
-                    <button key={entry.id} disabled={entry.voted || submitting} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} style={{ fontSize: `${18 + (46 * entry.votes) / Math.max(1, ...state.question!.entries.map((x) => x.votes))}px` }} className="rounded-2xl bg-sky-50 px-4 py-3 font-bold text-slate-900 disabled:opacity-50">
+                    <button key={entry.id} disabled={entry.voted || submitting} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} style={{ fontSize: `${18 + (46 * entry.votes) / Math.max(1, ...state.question!.entries.map((x) => x.votes))}px` }} className="rounded-2xl bg-neutral-100 px-4 py-3 font-semibold text-[#1d1d1f] disabled:opacity-50">
                       {entry.text} <HeartIcon className="inline h-5 w-5" aria-hidden="true" /> {entry.votes}
                     </button>
                   ))}
                 </div>
+                {wordSubmitted && <p className="mt-5 rounded-2xl bg-emerald-50 p-4 font-semibold text-emerald-900">
+                  <CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />
+                  {t("wordCloud.responseAdded")}
+                </p>}
               </div>
             )}
             {state.answerSubmitted && (
-              <p className="mt-5 rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-800">
+              <p className="mt-5 rounded-2xl bg-neutral-100 p-4 font-semibold text-[#1d1d1f]">
                 <CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />
                 {t("player.answerRecorded")}
               </p>
             )}
           </section>
         )}
-        {result && (
-          <section className="panel mt-6">
-            <h2 className="flex items-center gap-2 text-2xl font-black">
+        {result && state?.activityType === "QUIZ" && (
+          <section className="panel mt-8">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               <ChartBarIcon
                 className="h-6 w-6 text-sky-700"
                 aria-hidden="true"
@@ -171,8 +192,8 @@ export default function Play({
             <ol className="mt-4 grid gap-2">
               {result.leaderboard.map((x) => (
                 <li
-                  key={x.rank}
-                  className="rounded-xl bg-sky-50 p-3 font-semibold"
+                  key={`${x.rank}-${x.displayName}`}
+                  className="rounded-2xl bg-neutral-100 p-4 font-semibold"
                 >
                   {x.rank}. {x.displayName}: {x.score}
                 </li>

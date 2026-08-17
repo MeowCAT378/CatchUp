@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RoomPhase } from '@prisma/client';
+import { ActivityType, RoomPhase } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { competitionRanks } from './ranking';
 @Injectable()
@@ -30,37 +30,47 @@ export class RoomResultsService {
     const allAnswers = attempts.flatMap((attempt) => attempt.answers);
     const totalParticipants = attempts.length;
     const scores = attempts.map((attempt) => attempt.score);
+    const isQuiz = room.quiz.type === ActivityType.QUIZ;
     const answersAllowed =
       room.phase === RoomPhase.REVEALED || room.phase === RoomPhase.COMPLETED;
     const questions = room.quiz.questions.map((question) => {
       const answers = allAnswers.filter(
         (answer) => answer.questionId === question.id,
       );
-      const correct = answers.filter((answer) => answer.isCorrect).length;
+      const correct = isQuiz
+        ? answers.filter((answer) => answer.isCorrect).length
+        : 0;
       return {
         id: question.id,
         text: question.text,
         responseCount: answers.length,
         correctCount: correct,
-        incorrectCount: answers.length - correct,
+        incorrectCount: isQuiz ? answers.length - correct : 0,
         unansweredCount: totalParticipants - answers.length,
-        correctPercentage: answers.length
-          ? Math.round((correct / answers.length) * 100)
-          : 0,
-        correctChoiceId: answersAllowed
-          ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null)
-          : null,
+        correctPercentage:
+          isQuiz && answers.length
+            ? Math.round((correct / answers.length) * 100)
+            : 0,
+        correctChoiceId:
+          answersAllowed && isQuiz
+            ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null)
+            : null,
         distribution: question.choices.map((choice) => ({
           choiceId: choice.id,
           text: choice.text,
           count: answers.filter((answer) => answer.choiceId === choice.id)
             .length,
-          isCorrect: answersAllowed ? choice.isCorrect : undefined,
+          isCorrect: answersAllowed && isQuiz ? choice.isCorrect : undefined,
         })),
       };
     });
     return {
-      room: { code: room.code, phase: room.phase, quizTitle: room.quiz.title },
+      room: {
+        code: room.code,
+        phase: room.phase,
+        quizTitle: room.quiz.title,
+        activityType: room.quiz.type,
+      },
       summary: {
         totalParticipants,
         totalSubmittedAnswers: allAnswers.length,
@@ -83,16 +93,16 @@ export class RoomResultsService {
       participants: competitionRanks(attempts, (attempt) => attempt.score).map(
         ({ item: attempt, rank }) => {
           const answered = attempt.answers.length;
-          const correct = attempt.answers.filter(
-            (answer) => answer.isCorrect,
-          ).length;
+          const correct = isQuiz
+            ? attempt.answers.filter((answer) => answer.isCorrect).length
+            : 0;
           return {
             name: attempt.participant.displayName,
             score: attempt.score,
             rank,
             answeredCount: answered,
             correctCount: correct,
-            incorrectCount: answered - correct,
+            incorrectCount: isQuiz ? answered - correct : 0,
           };
         },
       ),

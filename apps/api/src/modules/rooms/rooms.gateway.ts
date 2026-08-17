@@ -12,7 +12,12 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { RoomsService } from './rooms.service';
 import { RoomEvents } from './room-events';
-import type { AnswerSubmitPayload, RoomJoinPayload, WordCloudSubmitPayload, WordCloudVotePayload } from './room-events';
+import type {
+  AnswerSubmitPayload,
+  RoomJoinPayload,
+  WordCloudSubmitPayload,
+  WordCloudVotePayload,
+} from './room-events';
 type SocketData = {
   userId?: string;
   code?: string;
@@ -22,7 +27,7 @@ type SocketData = {
 };
 @WebSocketGateway({
   namespace: '/rooms',
-  cors: { origin: process.env.WEB_ORIGIN ?? 'http://localhost:3001' },
+  cors: { origin: process.env.WEB_ORIGIN ?? 'http://localhost:3000' },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server!: Server;
@@ -64,8 +69,9 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         access.role === 'participant' ? access.participantId : undefined;
       data.participantToken =
         access.role === 'participant' ? payload.participantToken : undefined;
-      client.join(this.group(access.code));
-      if (access.role === 'host') client.join(this.hostGroup(access.code));
+      await client.join(this.group(access.code));
+      if (access.role === 'host')
+        await client.join(this.hostGroup(access.code));
       else {
         const key = `${access.roomId}:${access.participantId}`;
         const sockets = this.presence.get(key) ?? new Set<string>();
@@ -161,13 +167,27 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() body: WordCloudSubmitPayload,
   ) {
-    await this.wordCloud(client, body, () => this.rooms.submitWord(body.code, body.participantId, body.participantToken, body.text));
+    await this.wordCloud(client, body, () =>
+      this.rooms.submitWord(
+        body.code,
+        body.participantId,
+        body.participantToken,
+        body.text,
+      ),
+    );
   }
   @SubscribeMessage(RoomEvents.wordCloudVote) async wordCloudVote(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: WordCloudVotePayload,
   ) {
-    await this.wordCloud(client, body, () => this.rooms.voteWord(body.code, body.participantId, body.participantToken, body.entryId));
+    await this.wordCloud(client, body, () =>
+      this.rooms.voteWord(
+        body.code,
+        body.participantId,
+        body.participantToken,
+        body.entryId,
+      ),
+    );
   }
   @SubscribeMessage(RoomEvents.questionReveal) async reveal(
     @ConnectedSocket() client: Socket,
@@ -178,12 +198,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         body.code,
         (client.data as SocketData).userId!,
       );
-      this.server
-        .to(this.group(body.code))
-        .emit(RoomEvents.questionRevealed, {
-          ...(await this.rooms.state(body.code)),
-          correctChoiceId: revealed.correctChoiceId,
-        });
+      this.server.to(this.group(body.code)).emit(RoomEvents.questionRevealed, {
+        ...(await this.rooms.state(body.code)),
+        correctChoiceId: revealed.correctChoiceId,
+      });
       this.server
         .to(this.group(body.code))
         .emit(
@@ -201,11 +219,14 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         body.code,
         (client.data as SocketData).userId!,
       );
-      if (room.status === 'FINISHED')
+      if (room.status === 'FINISHED') {
+        this.server
+          .to(this.group(body.code))
+          .emit(RoomEvents.state, await this.rooms.state(body.code));
         this.server
           .to(this.group(body.code))
           .emit(RoomEvents.quizCompleted, await this.rooms.result(body.code));
-      else
+      } else
         this.server
           .to(this.group(body.code))
           .emit(RoomEvents.questionStarted, await this.rooms.state(body.code));
@@ -228,9 +249,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   activityDeleted(rooms: { id: string; code: string }[]) {
     for (const room of rooms) {
-      this.server.to(this.group(room.code)).emit(RoomEvents.error, { code: 'ROOM_NOT_FOUND' });
+      this.server
+        .to(this.group(room.code))
+        .emit(RoomEvents.error, { code: 'ROOM_NOT_FOUND' });
       this.server.in(this.group(room.code)).socketsLeave(this.group(room.code));
-      this.server.in(this.hostGroup(room.code)).socketsLeave(this.hostGroup(room.code));
+      this.server
+        .in(this.hostGroup(room.code))
+        .socketsLeave(this.hostGroup(room.code));
       for (const key of this.presence.keys())
         if (key.startsWith(`${room.id}:`)) this.presence.delete(key);
     }
@@ -257,10 +282,17 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       const data = client.data as SocketData;
-      if (data.role !== 'participant' || data.code !== body.code || data.participantId !== body.participantId || data.participantToken !== body.participantToken)
+      if (
+        data.role !== 'participant' ||
+        data.code !== body.code ||
+        data.participantId !== body.participantId ||
+        data.participantToken !== body.participantToken
+      )
         throw new ForbiddenException();
       await action();
-      this.server.to(this.group(body.code)).emit(RoomEvents.wordCloudUpdated, await this.rooms.state(body.code));
+      this.server
+        .to(this.group(body.code))
+        .emit(RoomEvents.wordCloudUpdated, await this.rooms.state(body.code));
       await this.dashboard(body.code);
     } catch (error) {
       this.error(client, error);
@@ -285,14 +317,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       sockets.delete(client.id);
       if (!sockets.size) {
         this.presence.delete(key);
-        client
-          .to(this.group(code))
-          .emit(RoomEvents.participantLeft, {
-            participantId: data.participantId,
-          });
+        client.to(this.group(code)).emit(RoomEvents.participantLeft, {
+          participantId: data.participantId,
+        });
       }
     }
-    client.leave(this.group(code));
+    await client.leave(this.group(code));
     data.code = undefined;
     await this.dashboard(code).catch(() => undefined);
   }

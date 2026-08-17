@@ -7,6 +7,10 @@ export const wordCloud = {
       results: "ผลลัพธ์ Word Cloud",
       totalVotes: "โหวตทั้งหมด",
       noEntries: "ยังไม่มีคำตอบ",
+      prompt: "คำถามสำหรับ Word Cloud",
+      promptNotConfigured: "ยังไม่ได้ตั้งค่าคำถาม",
+      prompts: "1 คำถาม",
+      responseAdded: "เพิ่มคำตอบแล้ว รอให้ผู้จัดกิจกรรมจบกิจกรรม",
     },
   },
   en: {
@@ -17,6 +21,10 @@ export const wordCloud = {
       results: "Word Cloud Results",
       totalVotes: "Total votes",
       noEntries: "No entries yet",
+      prompt: "Word Cloud prompt",
+      promptNotConfigured: "Prompt not configured",
+      prompts: "1 prompt",
+      responseAdded: "Response added. Wait for the host to end the activity.",
     },
   },
 };

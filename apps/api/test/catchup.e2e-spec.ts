@@ -9,6 +9,8 @@ import { PrismaService } from '../src/prisma/prisma.service';
 
 type Envelope<T> = { success: boolean; data: T; error?: { code: string } };
 const body = <T>(response: request.Response) => response.body as Envelope<T>;
+const errorCode = (response: request.Response) =>
+  body<unknown>(response).error?.code;
 const once = <T>(socket: Socket, event: string) =>
   new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(
@@ -132,10 +134,9 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
           .expect(201),
       ),
     );
-    expect(activities.map((response) => response.body.data.type)).toEqual([
-      'POLL',
-      'WORD_CLOUD',
-    ]);
+    expect(
+      activities.map((response) => body<{ type: string }>(response).data.type),
+    ).toEqual(['POLL', 'WORD_CLOUD']);
     const listedActivities = body<{ id: string; type: string }[]>(
       await request(app.getHttpServer())
         .get('/quizzes')
@@ -159,11 +160,11 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       .send({ title: 'Unknown type', type: 'UNKNOWN' })
       .expect(400);
     expect(
-      (
+      body<{ questions: unknown[] }>(
         await request(app.getHttpServer())
           .get(`/quizzes/${quiz.id}`)
-          .set('Authorization', `Bearer ${hostToken}`)
-      ).body.data.questions,
+          .set('Authorization', `Bearer ${hostToken}`),
+      ).data.questions,
     ).toHaveLength(2);
     const room = body<{ code: string }>(
       await request(app.getHttpServer())
@@ -187,11 +188,11 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       ).data.phase,
     ).toBe('WAITING');
     expect(
-      (
+      errorCode(
         await request(app.getHttpServer())
           .post(`/rooms/${code}/start`)
-          .set('Authorization', `Bearer ${otherHostToken}`)
-      ).body.error.code,
+          .set('Authorization', `Bearer ${otherHostToken}`),
+      ),
     ).toBe('FORBIDDEN');
 
     participant = body<typeof participant>(
@@ -205,18 +206,18 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
         .send({ code, displayName: 'Second' }),
     ).data;
     expect(
-      (
+      errorCode(
         await request(app.getHttpServer()).get(
           `/rooms/${code}?participantId=${participant.participantId}`,
-        )
-      ).body.error.code,
+        ),
+      ),
     ).toBe('PARTICIPANT_NOT_FOUND');
     expect(
-      (
+      errorCode(
         await request(app.getHttpServer()).get(
           `/rooms/${code}?participantId=${participant.participantId}&participantToken=${otherParticipant.participantToken}`,
-        )
-      ).body.error.code,
+        ),
+      ),
     ).toBe('PARTICIPANT_NOT_FOUND');
 
     hostSocket = io(`${baseUrl}/rooms`, {
@@ -302,13 +303,13 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     hostSocket.emit('question:reveal', { code });
     expect((await revealed).correctChoiceId).toBe(firstQuestion.choices[0].id);
     expect(
-      (
+      errorCode(
         await request(app.getHttpServer()).post(`/rooms/${code}/answers`).send({
           participantId: participant.participantId,
           participantToken: participant.participantToken,
           choiceId: firstQuestion.choices[0].id,
-        })
-      ).body.error.code,
+        }),
+      ),
     ).toBe('INVALID_ROOM_PHASE');
     const next = once<{ question: { position: number } }>(
       playerSocket,
@@ -337,18 +338,18 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     await completed;
 
     expect(
-      (
+      errorCode(
         await request(app.getHttpServer())
           .get(`/rooms/${code}/results`)
-          .set('Authorization', `Bearer ${playerToken}`)
-      ).body.error.code,
+          .set('Authorization', `Bearer ${playerToken}`),
+      ),
     ).toBe('FORBIDDEN');
     expect(
-      (
+      errorCode(
         await request(app.getHttpServer())
           .post(`/rooms/${code}/start`)
-          .set('Authorization', `Bearer ${hostToken}`)
-      ).body.error.code,
+          .set('Authorization', `Bearer ${hostToken}`),
+      ),
     ).toBe('INVALID_ROOM_PHASE');
     const results = body<{
       summary: {
@@ -547,13 +548,11 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     ).toBe(0);
 
     const otherTeacherToken = body<{ accessToken: string }>(
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: 'e2e+teacher@example.test',
-          name: 'Teacher',
-          password: 'password123',
-        }),
+      await request(app.getHttpServer()).post('/auth/register').send({
+        email: 'e2e+teacher@example.test',
+        name: 'Teacher',
+        password: 'password123',
+      }),
     ).data.accessToken;
     const protectedQuiz = await createActivity('QUIZ', 'protected');
     await request(app.getHttpServer())
@@ -677,13 +676,11 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       ).toBe(0);
     }
     const otherToken = body<{ accessToken: string }>(
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: 'e2e+delete-other@example.test',
-          name: 'Other',
-          password: 'password123',
-        }),
+      await request(app.getHttpServer()).post('/auth/register').send({
+        email: 'e2e+delete-other@example.test',
+        name: 'Other',
+        password: 'password123',
+      }),
     ).data.accessToken;
     const protectedActivity = await createActivity('QUIZ');
     await request(app.getHttpServer())
@@ -694,6 +691,6 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       .delete('/quizzes/missing-activity')
       .set('Authorization', `Bearer ${hostToken}`)
       .expect(404)
-      .expect(({ body }) => expect(body.error.code).toBe('QUIZ_NOT_FOUND'));
+      .expect((response) => expect(errorCode(response)).toBe('QUIZ_NOT_FOUND'));
   });
 });

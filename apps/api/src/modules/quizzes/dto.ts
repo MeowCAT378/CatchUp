@@ -36,4 +36,7 @@ export class UpdateQuizDto {
   @IsOptional() @IsString() @MinLength(1) title?: string;
   @IsOptional() @IsString() description?: string;
 }
+export class DuplicateQuizDto {
+  @IsOptional() @IsString() @MinLength(1) title?: string;
+}
 export class UpdateQuestionDto extends CreateQuestionDto {}

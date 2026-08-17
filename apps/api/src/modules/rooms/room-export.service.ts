@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { RoomResultsService } from './room-results.service';
-export const sanitizeSpreadsheetCell = (value: unknown) => {
+export const sanitizeSpreadsheetCell = (
+  value: string | number | boolean | null | undefined,
+) => {
   const text = String(value ?? '');
   return /^[=+\-@*]/.test(text) ? `'${text}` : text;
 };
-export const escapeCsvCell = (value: unknown) =>
-  `"${sanitizeSpreadsheetCell(value).replaceAll('"', '""')}"`;
+export const escapeCsvCell = (
+  value: string | number | boolean | null | undefined,
+) => `"${sanitizeSpreadsheetCell(value).replaceAll('"', '""')}"`;
 const safe = sanitizeSpreadsheetCell;
 const csv = escapeCsvCell;
 @Injectable()
@@ -14,6 +17,7 @@ export class RoomExportService {
   constructor(private readonly results: RoomResultsService) {}
   async csv(code: string, hostId: string) {
     const data = await this.results.results(code, hostId);
+    const isQuiz = data.room.activityType === 'QUIZ';
     const rows: unknown[][] = [
       ['Quiz title', data.room.quizTitle],
       ['Room code', data.room.code],
@@ -25,19 +29,17 @@ export class RoomExportService {
       [
         'Rank',
         'Participant',
-        'Score',
+        ...(isQuiz ? ['Score'] : []),
         'Answered',
-        'Correct',
-        'Incorrect',
+        ...(isQuiz ? ['Correct', 'Incorrect'] : []),
         'Completion %',
       ],
       ...data.participants.map((p) => [
         p.rank,
         p.name,
-        p.score,
+        ...(isQuiz ? [p.score] : []),
         p.answeredCount,
-        p.correctCount,
-        p.incorrectCount,
+        ...(isQuiz ? [p.correctCount, p.incorrectCount] : []),
         `${data.questions.length ? Math.round((p.answeredCount / data.questions.length) * 100) : 0}%`,
       ]),
     ];
@@ -48,6 +50,7 @@ export class RoomExportService {
   }
   async xlsx(code: string, hostId: string) {
     const data = await this.results.results(code, hostId);
+    const isQuiz = data.room.activityType === 'QUIZ';
     const book = new ExcelJS.Workbook();
     book.creator = 'CatchUp';
     const header = (sheet: ExcelJS.Worksheet, values: string[]) => {
@@ -63,9 +66,13 @@ export class RoomExportService {
       ['Participant count', data.summary.totalParticipants],
       ['Total responses', data.summary.totalSubmittedAnswers],
       ['Completion rate', data.summary.completionRate / 100],
-      ['Average score', data.summary.averageScore],
-      ['Highest score', data.summary.highestScore],
-      ['Lowest score', data.summary.lowestScore],
+      ...(isQuiz
+        ? [
+            ['Average score', data.summary.averageScore],
+            ['Highest score', data.summary.highestScore],
+            ['Lowest score', data.summary.lowestScore],
+          ]
+        : []),
     ]);
     summary.getColumn(1).width = 22;
     summary.getColumn(2).width = 42;
@@ -76,43 +83,42 @@ export class RoomExportService {
     header(participants, [
       'Rank',
       'Participant',
-      'Score',
+      ...(isQuiz ? ['Score'] : []),
       'Answered',
-      'Correct',
-      'Incorrect',
+      ...(isQuiz ? ['Correct', 'Incorrect'] : []),
       'Completion %',
     ]);
     data.participants.forEach((p) =>
       participants.addRow([
         p.rank,
         safe(p.name),
-        p.score,
+        ...(isQuiz ? [p.score] : []),
         p.answeredCount,
-        p.correctCount,
-        p.incorrectCount,
+        ...(isQuiz ? [p.correctCount, p.incorrectCount] : []),
         data.questions.length ? p.answeredCount / data.questions.length : 0,
       ]),
     );
-    participants.columns = [
-      { width: 10 },
-      { width: 28 },
-      { width: 12 },
-      { width: 12 },
-      { width: 12 },
-      { width: 12 },
-      { width: 16 },
-    ];
-    participants.getColumn(7).numFmt = '0.0%';
+    participants.columns = isQuiz
+      ? [
+          { width: 10 },
+          { width: 28 },
+          { width: 12 },
+          { width: 12 },
+          { width: 12 },
+          { width: 12 },
+          { width: 16 },
+        ]
+      : [{ width: 10 }, { width: 28 }, { width: 12 }, { width: 16 }];
+    participants.getColumn(isQuiz ? 7 : 4).numFmt = '0.0%';
     const questions = book.addWorksheet('Questions');
     header(questions, [
       'Question #',
       'Question',
       'Responses',
       'Unanswered',
-      'Correct',
-      'Incorrect',
-      'Correct %',
-      'Correct answer',
+      ...(isQuiz
+        ? ['Correct', 'Incorrect', 'Correct %', 'Correct answer']
+        : []),
     ]);
     data.questions.forEach((q, i) =>
       questions.addRow([
@@ -120,16 +126,20 @@ export class RoomExportService {
         safe(q.text),
         q.responseCount,
         q.unansweredCount,
-        q.correctCount,
-        q.incorrectCount,
-        q.correctPercentage / 100,
-        q.correctChoiceId
-          ? safe(
-              q.distribution.find(
-                (choice) => choice.choiceId === q.correctChoiceId,
-              )?.text,
-            )
-          : '',
+        ...(isQuiz
+          ? [
+              q.correctCount,
+              q.incorrectCount,
+              q.correctPercentage / 100,
+              q.correctChoiceId
+                ? safe(
+                    q.distribution.find(
+                      (choice) => choice.choiceId === q.correctChoiceId,
+                    )?.text,
+                  )
+                : '',
+            ]
+          : []),
       ]),
     );
     questions.columns = [
@@ -142,7 +152,7 @@ export class RoomExportService {
       { width: 14 },
       { width: 32 },
     ];
-    questions.getColumn(7).numFmt = '0.0%';
+    if (isQuiz) questions.getColumn(7).numFmt = '0.0%';
     const distribution = book.addWorksheet('Answer Distribution');
     header(distribution, [
       'Question #',
@@ -150,7 +160,7 @@ export class RoomExportService {
       'Option',
       'Responses',
       'Percentage',
-      'Correct',
+      ...(isQuiz ? ['Correct'] : []),
     ]);
     data.questions.forEach((q, i) =>
       q.distribution.forEach((choice) =>
@@ -160,7 +170,15 @@ export class RoomExportService {
           safe(choice.text),
           choice.count,
           q.responseCount ? choice.count / q.responseCount : 0,
-          choice.isCorrect === undefined ? '' : choice.isCorrect ? 'Yes' : 'No',
+          ...(isQuiz
+            ? [
+                choice.isCorrect === undefined
+                  ? ''
+                  : choice.isCorrect
+                    ? 'Yes'
+                    : 'No',
+              ]
+            : []),
         ]),
       ),
     );

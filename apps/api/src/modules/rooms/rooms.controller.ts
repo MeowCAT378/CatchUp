@@ -15,7 +15,13 @@ import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
-import { CreateRoomDto, JoinRoomDto, SubmitAnswerDto, SubmitWordDto, VoteWordDto } from './dto';
+import {
+  CreateRoomDto,
+  JoinRoomDto,
+  SubmitAnswerDto,
+  SubmitWordDto,
+  VoteWordDto,
+} from './dto';
 import { RoomExportService } from './room-export.service';
 import { RoomResultsService } from './room-results.service';
 import { RoomsService } from './rooms.service';
@@ -101,18 +107,29 @@ export class RoomsController {
     @Param('code') code: string,
     @Body() dto: SubmitWordDto,
   ) {
-    return this.rooms.submitWord(code, dto.participantId, dto.participantToken, dto.text);
+    return this.rooms.submitWord(
+      code,
+      dto.participantId,
+      dto.participantToken,
+      dto.text,
+    );
   }
   @Post(':code/word-cloud/votes') voteWord(
     @Param('code') code: string,
     @Body() dto: VoteWordDto,
   ) {
-    return this.rooms.voteWord(code, dto.participantId, dto.participantToken, dto.entryId);
+    return this.rooms.voteWord(
+      code,
+      dto.participantId,
+      dto.participantToken,
+      dto.entryId,
+    );
   }
   @Get(':code/result') result(
     @Param('code') code: string,
     @Query('participantId') participantId?: string,
+    @Query('participantToken') participantToken?: string,
   ) {
-    return this.rooms.result(code, participantId);
+    return this.rooms.participantResult(code, participantId, participantToken);
   }
 }

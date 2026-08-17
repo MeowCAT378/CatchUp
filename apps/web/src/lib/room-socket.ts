@@ -20,7 +20,7 @@ export const RoomEvents = {
   error: "room:error",
 } as const;
 export const roomSocket = (token?: string): Socket =>
-  io(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"}/rooms`, {
+  io(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms`, {
     auth: token ? { token } : undefined,
     transports: ["websocket"],
   });

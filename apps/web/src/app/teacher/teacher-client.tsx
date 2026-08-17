@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   PencilSquareIcon,
+  DocumentDuplicateIcon,
   PlayIcon,
   PlusIcon,
   ChartBarIcon,
@@ -34,8 +35,14 @@ export default function TeacherClient({ token }: { token: string }) {
         ),
       );
   useEffect(() => {
-    load();
-  }, []);
+    api<Quiz[]>("/quizzes", {}, token)
+      .then(setQuizzes)
+      .catch((e) =>
+        setError(
+          t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
+        ),
+      );
+  }, [t, token]);
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const quizTitle = title.trim();
@@ -78,6 +85,25 @@ export default function TeacherClient({ token }: { token: string }) {
           )
         ).code,
       );
+    } catch (e) {
+      setError(
+        t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function duplicate(quizId: string) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(
+        `/quizzes/${quizId}/duplicate`,
+        { method: "POST", body: JSON.stringify({}) },
+        token,
+      );
+      await load();
     } catch (e) {
       setError(
         t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
@@ -170,7 +196,9 @@ export default function TeacherClient({ token }: { token: string }) {
                 <span className="text-lg font-semibold text-[#1d1d1f]">
                   {quiz.title}{" "}
                   <span className="font-medium text-slate-500">
-                    ({quiz._count.questions} {t("quiz.questions")})
+                    {quiz.type === "WORD_CLOUD"
+                      ? `(${quiz._count.questions ? t("wordCloud.prompts") : t("wordCloud.promptNotConfigured")})`
+                      : `(${quiz._count.questions} ${t("quiz.questions")})`}
                   </span>
                   <ActivityTypeBadge type={quiz.type} />
                 </span>
@@ -183,12 +211,21 @@ export default function TeacherClient({ token }: { token: string }) {
                     {t("common.edit")}
                   </a>
                   <button
-                    disabled={busy || Boolean(deletingId)}
+                    disabled={busy || Boolean(deletingId) || (quiz.type === "WORD_CLOUD" && !quiz._count.questions)}
                     onClick={() => start(quiz.id)}
                     className="btn-primary"
                   >
                     <PlayIcon className="h-5 w-5" aria-hidden="true" />
                     {t("quiz.openRoom")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || Boolean(deletingId)}
+                    onClick={() => void duplicate(quiz.id)}
+                    className="btn-secondary"
+                  >
+                    <DocumentDuplicateIcon className="h-5 w-5" aria-hidden="true" />
+                    {t("common.duplicate")}
                   </button>
                   <button
                     type="button"

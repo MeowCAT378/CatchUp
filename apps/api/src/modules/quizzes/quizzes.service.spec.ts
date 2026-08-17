@@ -1,5 +1,56 @@
 import { QuizzesService } from './quizzes.service';
 describe('QuizzesService authorization', () => {
+  it('rejects invalid nested quiz questions before writing', () => {
+    const create = jest.fn();
+    const service = new QuizzesService({ quiz: { create } } as never);
+    expect(() =>
+      service.create('owner', {
+        title: 'Broken quiz',
+        type: 'QUIZ',
+        questions: [
+          {
+            text: 'Question',
+            choices: [
+              { text: 'A', isCorrect: true },
+              { text: 'B', isCorrect: true },
+            ],
+          },
+        ],
+      }),
+    ).toThrow('Quizzes need exactly one correct choice');
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('duplicates owned quiz content without rooms or results', async () => {
+    const create = jest.fn(() => Promise.resolve({ id: 'copy' }));
+    const prisma = {
+      quiz: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'quiz',
+          title: 'Original',
+          description: 'Description',
+          type: 'QUIZ',
+          ownerId: 'owner',
+          questions: [
+            {
+              text: 'Question',
+              position: 0,
+              choices: [
+                { text: 'A', isCorrect: true },
+                { text: 'B', isCorrect: false },
+              ],
+            },
+          ],
+        }),
+        create,
+      },
+    };
+    await expect(
+      new QuizzesService(prisma as never).duplicate('quiz', 'owner'),
+    ).resolves.toEqual({ id: 'copy' });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects a teacher modifying another teacher quiz', async () => {
     const prisma = {
       quiz: {
@@ -12,6 +63,30 @@ describe('QuizzesService authorization', () => {
         title: 'Changed',
       }),
     ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('does not rewrite questions used by room results', async () => {
+    const prisma = {
+      question: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'question',
+          quiz: {
+            ownerId: 'owner',
+            type: 'QUIZ',
+            _count: { rooms: 1 },
+          },
+        }),
+      },
+    };
+    await expect(
+      new QuizzesService(prisma as never).updateQuestion('question', 'owner', {
+        text: 'Changed',
+        choices: [
+          { text: 'A', isCorrect: true },
+          { text: 'B', isCorrect: false },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'ACTIVITY_IN_USE' });
   });
 
   it('deletes only an owned activity', async () => {
@@ -62,14 +137,12 @@ describe('QuizzesService authorization', () => {
     const remove = jest.fn();
     const prisma = {
       question: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({
-            id: 'question',
-            quizId: 'quiz',
-            position: 0,
-            quiz: { ownerId: 'owner' },
-          }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'question',
+          quizId: 'quiz',
+          position: 0,
+          quiz: { ownerId: 'owner' },
+        }),
         delete: remove,
         findMany: jest.fn().mockResolvedValue([]),
       },

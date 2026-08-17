@@ -1,12 +1,11 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ActivityType } from '@prisma/client';
 import { AppError } from '../../common/app-error';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  activityLifecycle,
+  canConfigurePrompt,
+} from '../rooms/activity-lifecycle';
 import {
   CreateQuestionDto,
   CreateQuizDto,
@@ -30,6 +29,15 @@ export class QuizzesService {
     });
   }
   create(ownerId: string, dto: CreateQuizDto) {
+    if (!canConfigurePrompt(dto.type, dto.questions?.length ?? 0))
+      throw new AppError(
+        'WORD_CLOUD_PROMPT_ALREADY_CONFIGURED',
+        400,
+        'Word clouds have exactly one prompt',
+      );
+    dto.questions?.forEach((question) =>
+      this.validateQuestion(dto.type, question),
+    );
     return this.prisma.quiz.create({
       data: {
         title: dto.title,
@@ -54,6 +62,40 @@ export class QuizzesService {
     return this.prisma.quiz.update({
       where: { id },
       data: { title: dto.title, description: dto.description },
+    });
+  }
+  async duplicate(id: string, ownerId: string, title?: string) {
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { id },
+      include: {
+        questions: {
+          include: { choices: true },
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+    if (!quiz) throw new AppError('QUIZ_NOT_FOUND', 404, 'Quiz not found');
+    if (quiz.ownerId !== ownerId) throw new ForbiddenException();
+    return this.prisma.quiz.create({
+      data: {
+        title: title?.trim() || `${quiz.title} (copy)`,
+        description: quiz.description,
+        type: quiz.type,
+        ownerId,
+        questions: {
+          create: quiz.questions.map((question) => ({
+            text: question.text,
+            position: question.position,
+            choices: {
+              create: question.choices.map(({ text, isCorrect }) => ({
+                text,
+                isCorrect,
+              })),
+            },
+          })),
+        },
+      },
+      include: { questions: { include: { choices: true } } },
     });
   }
   async remove(id: string, ownerId: string) {
@@ -113,8 +155,20 @@ export class QuizzesService {
   }
   async addQuestion(quizId: string, ownerId: string, dto: CreateQuestionDto) {
     const quiz = await this.owned(quizId, ownerId);
+    if (await this.prisma.room.count({ where: { quizId } }))
+      throw new AppError(
+        'ACTIVITY_IN_USE',
+        409,
+        'Questions cannot be changed after a room is created',
+      );
     this.validateQuestion(quiz.type, dto);
     const position = await this.prisma.question.count({ where: { quizId } });
+    if (!canConfigurePrompt(quiz.type, position))
+      throw new AppError(
+        'WORD_CLOUD_PROMPT_ALREADY_CONFIGURED',
+        409,
+        'Word clouds have exactly one prompt',
+      );
     return this.prisma.question.create({
       data: {
         quizId,
@@ -128,10 +182,20 @@ export class QuizzesService {
   async updateQuestion(id: string, ownerId: string, dto: UpdateQuestionDto) {
     const question = await this.prisma.question.findUnique({
       where: { id },
-      include: { quiz: true },
+      include: {
+        quiz: { include: { _count: { select: { rooms: true } } } },
+      },
     });
-    if (!question) throw new NotFoundException('Question not found');
+    if (!question)
+      throw new AppError('QUESTION_NOT_FOUND', 404, 'Question not found');
     if (question.quiz.ownerId !== ownerId) throw new ForbiddenException();
+    if (question.quiz._count.rooms)
+      throw new AppError(
+        'ACTIVITY_IN_USE',
+        409,
+        'Questions cannot be changed after a room is created',
+      );
+    this.validateQuestion(question.quiz.type, dto);
     return this.prisma.$transaction(async (tx) => {
       await tx.choice.deleteMany({ where: { questionId: id } });
       return tx.question.update({
@@ -144,10 +208,21 @@ export class QuizzesService {
   async removeQuestion(id: string, ownerId: string) {
     const question = await this.prisma.question.findUnique({
       where: { id },
-      include: { quiz: true },
+      include: { quiz: { include: { _count: { select: { rooms: true } } } } },
     });
-    if (!question) throw new NotFoundException('Question not found');
+    if (!question)
+      throw new AppError('QUESTION_NOT_FOUND', 404, 'Question not found');
     if (question.quiz.ownerId !== ownerId) throw new ForbiddenException();
+    if (
+      question.quiz.type &&
+      activityLifecycle(question.quiz.type).maxPrompts === 1 &&
+      question.quiz._count?.rooms
+    )
+      throw new AppError(
+        'ACTIVITY_IN_USE',
+        409,
+        'Word cloud prompts cannot be changed after a room is created',
+      );
     return this.prisma.$transaction(async (tx) => {
       await tx.question.delete({ where: { id } });
       const remaining = await tx.question.findMany({
@@ -174,7 +249,8 @@ export class QuizzesService {
   }
   private validateQuestion(type: ActivityType, dto: CreateQuestionDto) {
     const choices = dto.choices ?? [];
-    if (type === ActivityType.WORD_CLOUD) {
+    const lifecycle = activityLifecycle(type);
+    if (!lifecycle.usesChoices) {
       if (choices.length)
         throw new AppError(
           'VALIDATION_ERROR',
@@ -190,7 +266,7 @@ export class QuizzesService {
         'Questions need at least two choices',
       );
     if (
-      type === ActivityType.QUIZ &&
+      lifecycle.requiresCorrectChoice &&
       choices.filter((choice) => choice.isCorrect).length !== 1
     )
       throw new AppError(

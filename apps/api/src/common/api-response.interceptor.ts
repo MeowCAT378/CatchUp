@@ -8,6 +8,8 @@ import { map, Observable } from 'rxjs';
 @Injectable()
 export class ApiResponseInterceptor implements NestInterceptor {
   intercept(_: ExecutionContext, next: CallHandler): Observable<unknown> {
-    return next.handle().pipe(map((data) => ({ success: true, data })));
+    return next
+      .handle()
+      .pipe(map((data: unknown) => ({ success: true, data })));
   }
 }

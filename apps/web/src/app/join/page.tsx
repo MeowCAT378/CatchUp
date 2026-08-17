@@ -14,15 +14,14 @@ export default function JoinPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  useEffect(
-    () =>
-      setCode(
-        (new URLSearchParams(window.location.search).get("code") ?? "")
-          .replace(/\D/g, "")
-          .slice(0, 6),
-      ),
-    [],
-  );
+  useEffect(() => {
+    const initialCode = (
+      new URLSearchParams(window.location.search).get("code") ?? ""
+    )
+      .replace(/\D/g, "")
+      .slice(0, 6);
+    queueMicrotask(() => setCode(initialCode));
+  }, []);
   async function submit(form: FormData) {
     setLoading(true);
     try {

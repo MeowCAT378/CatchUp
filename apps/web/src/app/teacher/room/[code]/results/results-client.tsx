@@ -11,7 +11,7 @@ import { BackButton } from "@/components/back-button";
 import { api, ApiError } from "@/lib/api";
 
 type Results = {
-  room: { code: string; quizTitle: string; phase: string };
+  room: { code: string; quizTitle: string; phase: string; activityType: "QUIZ" | "POLL" | "WORD_CLOUD" };
   summary: {
     totalParticipants: number;
     totalSubmittedAnswers: number;
@@ -67,15 +67,21 @@ export default function ResultsClient({
     }
   };
   useEffect(() => {
-    void load();
-  }, [code, token]);
+    api<Results>(`/rooms/${code}/results`, {}, token)
+      .then(setResults)
+      .catch((e) =>
+        setError(
+          t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
+        ),
+      );
+  }, [code, t, token]);
   async function download(format: "csv" | "xlsx") {
     if (downloading) return;
     setDownloading(format);
     setError("");
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"}/rooms/${code}/results/export.${format}`,
+        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms/${code}/results/export.${format}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!response.ok) {
@@ -122,11 +128,15 @@ export default function ResultsClient({
     [t("results.participants"), results.summary.totalParticipants],
     [t("results.answers"), results.summary.totalSubmittedAnswers],
     [t("results.completion"), `${results.summary.completionRate}%`],
-    [t("results.averageScore"), results.summary.averageScore],
-    [
-      t("results.highLow"),
-      `${results.summary.highestScore} / ${results.summary.lowestScore}`,
-    ],
+    ...(results.room.activityType === "QUIZ"
+      ? [
+          [t("results.averageScore"), results.summary.averageScore],
+          [
+            t("results.highLow"),
+            `${results.summary.highestScore} / ${results.summary.lowestScore}`,
+          ],
+        ]
+      : []),
   ];
   return (
     <main className="page-shell">
@@ -192,11 +202,8 @@ export default function ResultsClient({
                 </h3>
                 <p className="mt-2 text-sm">
                   {question.responseCount} {t("results.responses")} ·{" "}
-                  {question.correctCount} {t("results.correct")} ·{" "}
-                  {question.incorrectCount} {t("results.incorrect")} ·{" "}
-                  {question.unansweredCount} {t("results.unanswered")} ·{" "}
-                  {t("results.correctPercentage")}: {question.correctPercentage}
-                  %
+                  {question.unansweredCount} {t("results.unanswered")}
+                  {results.room.activityType === "QUIZ" && <> · {question.correctCount} {t("results.correct")} · {question.incorrectCount} {t("results.incorrect")} · {t("results.correctPercentage")}: {question.correctPercentage}%</>}
                 </p>
                 <h4 className="mt-4 font-medium">
                   {t("results.answerDistribution")}
@@ -241,10 +248,10 @@ export default function ResultsClient({
                 <tr className="border-b">
                   <th>{t("results.rank")}</th>
                   <th>{t("results.participant")}</th>
-                  <th>{t("results.score")}</th>
+                  {results.room.activityType === "QUIZ" && <th>{t("results.score")}</th>}
                   <th>{t("results.answered")}</th>
-                  <th>{t("results.correct")}</th>
-                  <th>{t("results.incorrect")}</th>
+                  {results.room.activityType === "QUIZ" && <th>{t("results.correct")}</th>}
+                  {results.room.activityType === "QUIZ" && <th>{t("results.incorrect")}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -255,10 +262,10 @@ export default function ResultsClient({
                   >
                     <td>{participant.rank}</td>
                     <td>{participant.name}</td>
-                    <td>{participant.score}</td>
+                    {results.room.activityType === "QUIZ" && <td>{participant.score}</td>}
                     <td>{participant.answeredCount}</td>
-                    <td>{participant.correctCount}</td>
-                    <td>{participant.incorrectCount}</td>
+                    {results.room.activityType === "QUIZ" && <td>{participant.correctCount}</td>}
+                    {results.room.activityType === "QUIZ" && <td>{participant.incorrectCount}</td>}
                   </tr>
                 ))}
               </tbody>

@@ -23,13 +23,13 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const code =
       typeof body === 'object' && body !== null && 'code' in body
         ? (body as { code: string }).code
-        : status === HttpStatus.BAD_REQUEST
+        : status === 400
           ? 'VALIDATION_ERROR'
-          : status === HttpStatus.FORBIDDEN
+          : status === 403
             ? 'FORBIDDEN'
-            : status === HttpStatus.NOT_FOUND
+            : status === 404
               ? 'NOT_FOUND'
-              : status === HttpStatus.UNAUTHORIZED
+              : status === 401
                 ? 'UNAUTHORIZED'
                 : 'INTERNAL_ERROR';
     response.status(status).json({
@@ -37,10 +37,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       error: {
         status,
         code,
-        message:
-          status === HttpStatus.INTERNAL_SERVER_ERROR
-            ? 'Internal server error'
-            : message,
+        message: status === 500 ? 'Internal server error' : message,
       },
     });
   }

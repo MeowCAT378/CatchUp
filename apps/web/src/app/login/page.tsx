@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { UserIcon } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
+import { Logo } from "@/components/logo";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -28,7 +29,7 @@ export default function LoginPage() {
       <section className="page-content flex min-h-screen max-w-md flex-col justify-center">
         <BackButton href="/" />
         <div className="panel mt-4 w-full">
-          <p className="badge">CatchUp</p>
+          <Logo className="mx-auto h-28 w-auto sm:h-32" />
           <h1 className="mt-4 text-3xl font-black text-slate-900">
             {t("auth.signIn")}
           </h1>

@@ -3,6 +3,7 @@
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
 import { useTranslation } from "react-i18next";
+import { Logo } from "@/components/logo";
 
 export function TeacherHeader() {
   const { t } = useTranslation();
@@ -11,9 +12,10 @@ export function TeacherHeader() {
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <a
           href="/teacher"
-          className="text-lg font-semibold tracking-tight text-[#1d1d1f]"
+          aria-label="CatchUp"
+          className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
         >
-          CatchUp
+          <Logo className="h-12 w-auto sm:h-14" />
         </a>
         <button
           type="button"

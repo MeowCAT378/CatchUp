@@ -6,6 +6,7 @@ import {
   UserIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
+import { Logo } from "@/components/logo";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -13,7 +14,7 @@ export default function Home() {
     <main className="page-shell page-shell-hero">
       <div className="page-content flex min-h-screen max-w-5xl items-center">
         <section className="w-full py-10 sm:py-16">
-          <p className="badge">CatchUp</p>
+          <Logo className="h-28 w-auto sm:h-36" />
           <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-tight text-[#1d1d1f] sm:text-7xl">
             {t("room.landingTitle")}
           </h1>

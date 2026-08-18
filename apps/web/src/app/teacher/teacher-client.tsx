@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { api, ApiError } from "@/lib/api";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
+import { Logo } from "@/components/logo";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Quiz = { id: string; title: string; type: ActivityType; _count: { questions: number } };
 export default function TeacherClient({ token }: { token: string }) {
@@ -131,7 +132,7 @@ export default function TeacherClient({ token }: { token: string }) {
       <div className="page-content max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-neutral-500">CatchUp</p>
+            <Logo className="h-20 w-auto sm:h-24" />
             <h1 className="mt-1 text-4xl font-semibold tracking-tight text-[#1d1d1f] sm:text-5xl">
               {t("quiz.myQuizzes")}
             </h1>

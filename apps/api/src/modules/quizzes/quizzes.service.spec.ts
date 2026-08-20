@@ -133,7 +133,7 @@ describe('QuizzesService authorization', () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
-  it('deletes a question regardless of responses', async () => {
+  it('blocks deleting a question after a room exists', async () => {
     const remove = jest.fn();
     const prisma = {
       question: {
@@ -141,20 +141,18 @@ describe('QuizzesService authorization', () => {
           id: 'question',
           quizId: 'quiz',
           position: 0,
-          quiz: { ownerId: 'owner' },
+          quiz: {
+            ownerId: 'owner',
+            type: 'QUIZ',
+            _count: { rooms: 1 },
+          },
         }),
         delete: remove,
-        findMany: jest.fn().mockResolvedValue([]),
       },
-      $transaction: jest.fn((work: unknown) =>
-        Array.isArray(work)
-          ? Promise.all(work)
-          : (work as (tx: unknown) => unknown)(prisma),
-      ),
     };
     await expect(
       new QuizzesService(prisma as never).removeQuestion('question', 'owner'),
-    ).resolves.toEqual({ id: 'question' });
-    expect(remove).toHaveBeenCalledWith({ where: { id: 'question' } });
+    ).rejects.toMatchObject({ code: 'ACTIVITY_IN_USE' });
+    expect(remove).not.toHaveBeenCalled();
   });
 });

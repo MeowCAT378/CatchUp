@@ -1,12 +1,22 @@
 type Entry = { id: string; text: string; votes: number; rank?: number };
 
 const colors = [
-  "text-neutral-900",
-  "text-neutral-700",
-  "text-slate-600",
-  "text-zinc-600",
-  "text-stone-600",
+  "text-teal-700",
+  "text-cyan-700",
+  "text-sky-700",
+  "text-emerald-700",
+  "text-blue-700",
+  "text-amber-700",
+  "text-orange-700",
 ];
+
+export function wordCloudColor(text: string) {
+  let hash = 0;
+  for (const character of text.trim().toLowerCase()) {
+    hash = (hash * 31 + character.charCodeAt(0)) | 0;
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
 
 export function wordCloudFontSize(
   votes: number,
@@ -50,13 +60,13 @@ export function WordCloudResults({
         {totalVotesLabel}: {totalVotes}
       </p>
       <div className="mt-5 flex min-h-72 flex-wrap content-center justify-center gap-x-7 gap-y-5 overflow-hidden rounded-3xl bg-neutral-100 p-6 sm:min-h-96 sm:p-10">
-        {ranked.map((entry, index) => (
+        {ranked.map((entry) => (
           <span
             key={entry.id}
             style={{
               fontSize: `clamp(22px, calc(6vw + ${wordCloudFontSize(entry.votes, minVotes, maxVotes) / 2}px), ${wordCloudFontSize(entry.votes, minVotes, maxVotes)}px)`,
             }}
-            className={`break-words text-center font-black leading-none ${colors[index % colors.length]}`}
+            className={`break-words text-center font-black leading-none ${wordCloudColor(entry.text)}`}
           >
             {entry.text}
           </span>

@@ -23,7 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <LanguageProvider>
           <div className="fixed right-5 top-5 z-30">
-            <LanguageSwitcher />
+            <LanguageSwitcher hideOnTeacher />
           </div>
           {children}
         </LanguageProvider>

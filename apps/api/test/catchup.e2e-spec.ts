@@ -50,6 +50,7 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       !/test/i.test(new URL(process.env.DATABASE_URL).pathname)
     )
       throw new Error('E2E requires the dedicated test database.');
+    process.env.JWT_SECRET = 'e2e-only-secret-at-least-32-characters';
     const module = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -207,16 +208,17 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     ).data;
     expect(
       errorCode(
-        await request(app.getHttpServer()).get(
-          `/rooms/${code}?participantId=${participant.participantId}`,
-        ),
+        await request(app.getHttpServer())
+          .get(`/rooms/${code}`)
+          .set('X-Participant-Id', participant.participantId),
       ),
     ).toBe('PARTICIPANT_NOT_FOUND');
     expect(
       errorCode(
-        await request(app.getHttpServer()).get(
-          `/rooms/${code}?participantId=${participant.participantId}&participantToken=${otherParticipant.participantToken}`,
-        ),
+        await request(app.getHttpServer())
+          .get(`/rooms/${code}`)
+          .set('X-Participant-Id', participant.participantId)
+          .set('X-Participant-Token', otherParticipant.participantToken),
       ),
     ).toBe('PARTICIPANT_NOT_FOUND');
 
@@ -269,16 +271,18 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       ).data.participants,
     ).toHaveLength(2);
     const firstQuestion = quiz.questions[0];
-    const progress = once<{ submitted: number; participants: number }>(
-      hostSocket,
-      'answer:progress',
-    );
+    const progress = once<{
+      progress: { submitted: number; participants: number };
+    }>(hostSocket, 'dashboard:updated');
     playerSocket.emit('answer:submit', {
       code,
       ...participant,
       choiceId: firstQuestion.choices.find((choice) => choice.isCorrect)!.id,
     });
-    expect(await progress).toEqual({ submitted: 1, participants: 2 });
+    expect((await progress).progress).toEqual({
+      submitted: 1,
+      participants: 2,
+    });
     const duplicate = once<{ code: string }>(playerSocket, 'room:error');
     playerSocket.emit('answer:submit', {
       code,
@@ -286,7 +290,18 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       choiceId: firstQuestion.choices[1].id,
     });
     expect((await duplicate).code).toBe('ALREADY_ANSWERED');
-    await request(app.getHttpServer())
+    const selected = body<{
+      selectedChoiceId: string | null;
+      correctChoiceId?: string | null;
+    }>(
+      await request(app.getHttpServer())
+        .get(`/rooms/${code}`)
+        .set('X-Participant-Id', participant.participantId)
+        .set('X-Participant-Token', participant.participantToken),
+    ).data;
+    expect(selected.selectedChoiceId).toBe(firstQuestion.choices[0].id);
+    expect(selected).not.toHaveProperty('correctChoiceId');
+    const accepted = await request(app.getHttpServer())
       .post(`/rooms/${code}/answers`)
       .send({
         code,
@@ -295,6 +310,20 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
         choiceId: firstQuestion.choices[1].id,
       })
       .expect(201);
+    expect(body<{ accepted: boolean }>(accepted).data).toEqual({
+      accepted: true,
+    });
+    expect(body<Record<string, unknown>>(accepted).data).not.toHaveProperty(
+      'correct',
+    );
+    expect(
+      errorCode(
+        await request(app.getHttpServer())
+          .get(`/rooms/${code}/result`)
+          .set('X-Participant-Id', participant.participantId)
+          .set('X-Participant-Token', participant.participantToken),
+      ),
+    ).toBe('INVALID_ROOM_PHASE');
 
     const revealed = once<{ correctChoiceId: string }>(
       playerSocket,
@@ -302,6 +331,19 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     );
     hostSocket.emit('question:reveal', { code });
     expect((await revealed).correctChoiceId).toBe(firstQuestion.choices[0].id);
+    expect(
+      body<{ correctChoiceId: string }>(
+        await request(app.getHttpServer())
+          .get(`/rooms/${code}`)
+          .set('X-Participant-Id', participant.participantId)
+          .set('X-Participant-Token', participant.participantToken),
+      ).data.correctChoiceId,
+    ).toBe(firstQuestion.choices[0].id);
+    await request(app.getHttpServer())
+      .get(`/rooms/${code}/result`)
+      .set('X-Participant-Id', participant.participantId)
+      .set('X-Participant-Token', participant.participantToken)
+      .expect(200);
     expect(
       errorCode(
         await request(app.getHttpServer()).post(`/rooms/${code}/answers`).send({
@@ -319,9 +361,10 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     expect((await next).question.position).toBe(2);
     expect(
       body<{ question: { position: number }; answerSubmitted: boolean }>(
-        await request(app.getHttpServer()).get(
-          `/rooms/${code}?participantId=${participant.participantId}&participantToken=${participant.participantToken}`,
-        ),
+        await request(app.getHttpServer())
+          .get(`/rooms/${code}`)
+          .set('X-Participant-Id', participant.participantId)
+          .set('X-Participant-Token', participant.participantToken),
       ).data,
     ).toMatchObject({ question: { position: 2 }, answerSubmitted: false });
     recoveredSocket.disconnect();
@@ -336,6 +379,21 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     const completed = once<{ phase: string }>(playerSocket, 'quiz:completed');
     hostSocket.emit('quiz:complete', { code });
     await completed;
+
+    await request(app.getHttpServer())
+      .get(
+        `/rooms/${code}/result?participantId=${participant.participantId}&participantToken=${participant.participantToken}`,
+      )
+      .expect(403);
+    expect(
+      body<{ leaderboard: { isYou: boolean }[] }>(
+        await request(app.getHttpServer())
+          .get(`/rooms/${code}/result`)
+          .set('X-Participant-Id', participant.participantId)
+          .set('X-Participant-Token', participant.participantToken)
+          .expect(200),
+      ).data.leaderboard.some((entry) => entry.isYou),
+    ).toBe(true);
 
     expect(
       errorCode(
@@ -398,7 +456,7 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     ).toContain("'=นักเรียนไทย");
   }, 30_000);
 
-  it('lets the owner delete used questions and cascades related data', async () => {
+  it('deletes unused questions but preserves questions used by rooms', async () => {
     const owner = await prisma.user.findUniqueOrThrow({
       where: { email: 'e2e+host@example.test' },
     });
@@ -426,16 +484,17 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
                         ],
                       },
               },
-              {
-                text: `Unused ${suffix}`,
-                position: 1,
-                choices:
-                  type === 'WORD_CLOUD'
-                    ? undefined
-                    : {
+              ...(type === 'WORD_CLOUD'
+                ? []
+                : [
+                    {
+                      text: `Unused ${suffix}`,
+                      position: 1,
+                      choices: {
                         create: [{ text: 'Only', isCorrect: type === 'QUIZ' }],
                       },
-              },
+                    },
+                  ]),
             ],
           },
         },
@@ -487,17 +546,17 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${quiz.questions[0].id}`)
       .set('Authorization', `Bearer ${hostToken}`)
-      .expect(200);
+      .expect(409);
     expect(
       await prisma.answer.count({
         where: { questionId: quiz.questions[0].id },
       }),
-    ).toBe(0);
+    ).toBe(1);
     expect(
       await prisma.choice.count({
         where: { questionId: quiz.questions[0].id },
       }),
-    ).toBe(0);
+    ).toBe(2);
 
     const poll = await createActivity('POLL', 'poll');
     await createResponse(
@@ -509,12 +568,17 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${poll.questions[0].id}`)
       .set('Authorization', `Bearer ${hostToken}`)
-      .expect(200);
+      .expect(409);
+    await request(app.getHttpServer())
+      .delete(`/quizzes/questions/${poll.questions[1].id}`)
+      .set('Authorization', `Bearer ${hostToken}`)
+      .expect(409);
     expect(
       await prisma.answer.count({
         where: { questionId: poll.questions[0].id },
       }),
-    ).toBe(0);
+    ).toBe(1);
+    expect(await prisma.question.count({ where: { quizId: poll.id } })).toBe(2);
 
     const wordCloud = await createActivity('WORD_CLOUD', 'word cloud');
     const wordRoom = await prisma.room.create({
@@ -527,6 +591,7 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       data: {
         roomId: wordRoom.id,
         questionId: wordCloud.questions[0].id,
+        participantId: wordParticipant.id,
         text: 'Cloud',
         normalizedText: 'cloud',
       },
@@ -537,15 +602,15 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${wordCloud.questions[0].id}`)
       .set('Authorization', `Bearer ${hostToken}`)
-      .expect(200);
+      .expect(409);
     expect(
       await prisma.wordCloudEntry.count({
         where: { questionId: wordCloud.questions[0].id },
       }),
-    ).toBe(0);
+    ).toBe(1);
     expect(
       await prisma.wordCloudVote.count({ where: { entryId: entry.id } }),
-    ).toBe(0);
+    ).toBe(1);
 
     const otherTeacherToken = body<{ accessToken: string }>(
       await request(app.getHttpServer()).post('/auth/register').send({
@@ -614,6 +679,7 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
           data: {
             roomId: room.id,
             questionId: activity.questions[0].id,
+            participantId: participant.id,
             text: 'Cloud',
             normalizedText: 'cloud',
           },

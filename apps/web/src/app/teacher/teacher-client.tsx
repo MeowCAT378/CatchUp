@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "next/navigation";
 import {
   PencilSquareIcon,
   DocumentDuplicateIcon,
@@ -11,18 +12,18 @@ import {
   QuestionMarkCircleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { api, ApiError } from "@/lib/api";
+import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { Logo } from "@/components/logo";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Quiz = { id: string; title: string; type: ActivityType; _count: { questions: number } };
 export default function TeacherClient({ token }: { token: string }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ActivityType>();
-  const [room, setRoom] = useState("");
-  const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState<Quiz>();
   const [deletingId, setDeletingId] = useState<string>();
@@ -30,31 +31,23 @@ export default function TeacherClient({ token }: { token: string }) {
   const load = () =>
     api<Quiz[]>("/quizzes", {}, token)
       .then(setQuizzes)
-      .catch((e) =>
-        setError(
-          t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-        ),
-      );
+      .catch((error) => setErrorCode(apiErrorCode(error)));
   useEffect(() => {
     api<Quiz[]>("/quizzes", {}, token)
       .then(setQuizzes)
-      .catch((e) =>
-        setError(
-          t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-        ),
-      );
-  }, [t, token]);
+      .catch((error) => setErrorCode(apiErrorCode(error)));
+  }, [token]);
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const quizTitle = title.trim();
     if (!quizTitle || !type) {
-      setError(t("errors.VALIDATION_ERROR"));
+      setErrorCode("VALIDATION_ERROR");
       return;
     }
     if (creating.current || busy) return;
     creating.current = true;
     setBusy(true);
-    setError("");
+    setErrorCode("");
     try {
       await api<Quiz>(
         "/quizzes",
@@ -64,10 +57,8 @@ export default function TeacherClient({ token }: { token: string }) {
       setTitle("");
       setType(undefined);
       await load();
-    } catch (e) {
-      setError(
-        t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-      );
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       creating.current = false;
       setBusy(false);
@@ -76,20 +67,16 @@ export default function TeacherClient({ token }: { token: string }) {
   async function start(quizId: string) {
     if (busy) return;
     setBusy(true);
+    setErrorCode("");
     try {
-      setRoom(
-        (
-          await api<{ code: string }>(
-            "/rooms",
-            { method: "POST", body: JSON.stringify({ quizId }) },
-            token,
-          )
-        ).code,
+      const created = await api<{ code: string }>(
+        "/rooms",
+        { method: "POST", body: JSON.stringify({ quizId }) },
+        token,
       );
-    } catch (e) {
-      setError(
-        t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-      );
+      router.push(`/teacher/room/${created.code}`);
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       setBusy(false);
     }
@@ -97,7 +84,7 @@ export default function TeacherClient({ token }: { token: string }) {
   async function duplicate(quizId: string) {
     if (busy) return;
     setBusy(true);
-    setError("");
+    setErrorCode("");
     try {
       await api(
         `/quizzes/${quizId}/duplicate`,
@@ -105,10 +92,8 @@ export default function TeacherClient({ token }: { token: string }) {
         token,
       );
       await load();
-    } catch (e) {
-      setError(
-        t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-      );
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       setBusy(false);
     }
@@ -116,13 +101,13 @@ export default function TeacherClient({ token }: { token: string }) {
   async function remove() {
     if (!confirming || deletingId) return;
     setDeletingId(confirming.id);
-    setError("");
+    setErrorCode("");
     try {
       await api(`/quizzes/${confirming.id}`, { method: "DELETE" }, token);
       setQuizzes((items) => items.filter((quiz) => quiz.id !== confirming.id));
       setConfirming(undefined);
-    } catch (e) {
-      setError(t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`));
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       setDeletingId(undefined);
     }
@@ -160,8 +145,8 @@ export default function TeacherClient({ token }: { token: string }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("activity.title", { type: t(`activity.${type}.name`) })}
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? "create-quiz-error" : undefined}
+              aria-invalid={errorCode === "VALIDATION_ERROR"}
+              aria-describedby={errorCode === "VALIDATION_ERROR" ? "create-quiz-error" : undefined}
               className="form-input mt-0 flex-1"
             />
             <button type="submit" disabled={busy} className="btn-primary">
@@ -170,20 +155,9 @@ export default function TeacherClient({ token }: { token: string }) {
             </button>
             <button type="button" onClick={() => setType(undefined)} className="btn-secondary">{t("common.back")}</button>
           </form>}
-          {room && (
-            <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-emerald-900">
-              {t("common.roomCode")}: <strong>{room}</strong>{" "}
-              <a
-                className="ml-2 font-semibold underline"
-                href={`/teacher/room/${room}`}
-              >
-                {t("quiz.hostControls")}
-              </a>
-            </p>
-          )}
-          {error && (
+          {errorCode && (
             <p id="create-quiz-error" role="alert" className="alert-error mt-4">
-              {error}
+              {t(`errors.${errorCode}`)}
             </p>
           )}
         </section>
@@ -203,6 +177,13 @@ export default function TeacherClient({ token }: { token: string }) {
                   </span>
                   <ActivityTypeBadge type={quiz.type} />
                 </span>
+                {!quiz._count.questions && (
+                  <span id={`open-room-hint-${quiz.id}`} className="text-sm text-amber-800">
+                    {quiz.type === "WORD_CLOUD"
+                      ? t("wordCloud.promptNotConfigured")
+                      : t("quiz.addQuestionBeforeRoom")}
+                  </span>
+                )}
                 <span className="flex flex-wrap gap-2">
                   <a
                     href={`/teacher/quiz/${quiz.id}`}
@@ -212,7 +193,8 @@ export default function TeacherClient({ token }: { token: string }) {
                     {t("common.edit")}
                   </a>
                   <button
-                    disabled={busy || Boolean(deletingId) || (quiz.type === "WORD_CLOUD" && !quiz._count.questions)}
+                    disabled={busy || Boolean(deletingId) || !quiz._count.questions}
+                    aria-describedby={!quiz._count.questions ? `open-room-hint-${quiz.id}` : undefined}
                     onClick={() => start(quiz.id)}
                     className="btn-primary"
                   >

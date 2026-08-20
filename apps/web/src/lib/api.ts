@@ -13,6 +13,7 @@ export type ApiErrorCode =
   | "INVALID_ACTIVITY_ACTION"
   | "WORD_CLOUD_PROMPT_REQUIRED"
   | "WORD_CLOUD_PROMPT_ALREADY_CONFIGURED"
+  | "WORD_ALREADY_SUBMITTED"
   | "ALREADY_ANSWERED"
   | "QUESTION_HAS_RESPONSES"
   | "ACTIVITY_IN_USE"
@@ -30,6 +31,8 @@ export class ApiError extends Error {
     super(message ?? code);
   }
 }
+export const apiErrorCode = (error: unknown): ApiErrorCode =>
+  error instanceof ApiError ? error.code : "REQUEST_FAILED";
 export type ApiEnvelope<T> = {
   success: boolean;
   data: T;
@@ -40,13 +43,14 @@ export async function api<T>(
   init: RequestInit = {},
   token?: string,
 ): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  if (token && !headers.has("Authorization"))
+    headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
+    headers,
     cache: "no-store",
   });
   const body = (await response.json()) as ApiEnvelope<T>;

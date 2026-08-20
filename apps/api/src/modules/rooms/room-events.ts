@@ -14,7 +14,6 @@ export const RoomEvents = {
   participantLeft: 'participant:left',
   quizStarted: 'quiz:started',
   questionStarted: 'question:started',
-  answerProgress: 'answer:progress',
   questionRevealed: 'question:revealed',
   leaderboardUpdated: 'leaderboard:updated',
   wordCloudUpdated: 'wordcloud:updated',

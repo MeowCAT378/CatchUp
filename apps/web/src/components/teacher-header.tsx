@@ -4,6 +4,7 @@ import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
 import { useTranslation } from "react-i18next";
 import { Logo } from "@/components/logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function TeacherHeader() {
   const { t } = useTranslation();
@@ -17,17 +18,21 @@ export function TeacherHeader() {
         >
           <Logo className="h-12 w-auto sm:h-14" />
         </a>
-        <button
-          type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="btn-secondary min-h-9 px-4 py-1.5 text-xs"
-        >
-          <ArrowRightStartOnRectangleIcon
-            className="h-4 w-4"
-            aria-hidden="true"
-          />
-          {t("teacher.logout")}
-        </button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            aria-label={t("teacher.logout")}
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="btn-secondary px-3 py-1.5 text-xs sm:px-4"
+          >
+            <ArrowRightStartOnRectangleIcon
+              className="h-5 w-5"
+              aria-hidden="true"
+            />
+            <span className="hidden sm:inline">{t("teacher.logout")}</span>
+          </button>
+        </div>
       </div>
     </header>
   );

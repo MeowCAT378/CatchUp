@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '../../common/app-error';
@@ -13,16 +14,23 @@ export class AuthService {
   ) {}
   async register(dto: RegisterDto) {
     const email = normalizeEmail(dto.email);
-    if (await this.prisma.user.findUnique({ where: { email } }))
-      throw new AppError('EMAIL_IN_USE', 409, 'Email is already registered');
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        name: dto.name,
-        passwordHash: await bcrypt.hash(dto.password, 12),
-      },
-    });
-    return this.token(user);
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          name: dto.name,
+          passwordHash: await bcrypt.hash(dto.password, 12),
+        },
+      });
+      return this.token(user);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new AppError('EMAIL_IN_USE', 409, 'Email is already registered');
+      throw error;
+    }
   }
   async login(dto: LoginDto) {
     const email = normalizeEmail(dto.email);

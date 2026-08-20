@@ -2,9 +2,32 @@ const { PrismaClient, RoomPhase, RoomStatus } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
+const MIN_SEED_PASSWORD_LENGTH = 12;
+const ALLOWED_SEED_ENVIRONMENTS = new Set(['development', 'test']);
+
+function assertSeedEnvironment(value) {
+  const environment = value?.trim().toLowerCase();
+  if (!environment || !ALLOWED_SEED_ENVIRONMENTS.has(environment)) {
+    throw new Error(
+      'Database seeding requires NODE_ENV to be explicitly set to development or test',
+    );
+  }
+}
 
 async function main() {
-  const passwordHash = await bcrypt.hash('123456789', 12);
+  assertSeedEnvironment(process.env.NODE_ENV);
+
+  const seedPassword = process.env.CATCHUP_SEED_PASSWORD;
+  if (
+    typeof seedPassword !== 'string' ||
+    seedPassword.trim().length < MIN_SEED_PASSWORD_LENGTH
+  ) {
+    throw new Error(
+      `CATCHUP_SEED_PASSWORD must contain at least ${MIN_SEED_PASSWORD_LENGTH} non-whitespace characters`,
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(seedPassword, 12);
 
   for (let index = 1; index <= 5; index++) {
     const suffix = String(index);
@@ -152,13 +175,17 @@ async function main() {
   }
 }
 
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-    console.log('Seeded 5 mock rows for every table. Mock user password: 123456789');
-  })
-  .catch(async (error) => {
-    console.error(error);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+if (require.main === module) {
+  main()
+    .then(async () => {
+      await prisma.$disconnect();
+      console.log('Seeded 5 mock rows for every table.');
+    })
+    .catch(async (error) => {
+      console.error(error);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
+}
+
+module.exports = { assertSeedEnvironment };

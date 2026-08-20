@@ -5,7 +5,15 @@ export const sanitizeSpreadsheetCell = (
   value: string | number | boolean | null | undefined,
 ) => {
   const text = String(value ?? '');
-  return /^[=+\-@*]/.test(text) ? `'${text}` : text;
+  let index = 0;
+  while (index < text.length) {
+    const character = text[index];
+    const code = text.charCodeAt(index);
+    if (!/\s/.test(character) && code > 31 && code !== 127) break;
+    index += 1;
+  }
+  const marker = text[index];
+  return marker !== undefined && '=+-@'.includes(marker) ? `'${text}` : text;
 };
 export const escapeCsvCell = (
   value: string | number | boolean | null | undefined,

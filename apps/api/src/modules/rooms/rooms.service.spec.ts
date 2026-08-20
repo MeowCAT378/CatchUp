@@ -49,7 +49,7 @@ describe('RoomsService state machine', () => {
       ),
     ).rejects.toMatchObject({ code: 'INVALID_ROOM_PHASE' });
     await expect(
-      service(room(RoomPhase.REVEALED)).submit('123456', 'p1', 'c1'),
+      service(room(RoomPhase.REVEALED)).submit('123456', 'p1', 'token', 'c1'),
     ).rejects.toMatchObject({ code: 'INVALID_ROOM_PHASE' });
   });
   it('rejects a stale participant id', async () => {
@@ -67,6 +67,54 @@ describe('RoomsService state machine', () => {
       ),
     ).rejects.toMatchObject({ code: 'PARTICIPANT_NOT_FOUND' });
   });
+  it.each([ActivityType.QUIZ, ActivityType.POLL])(
+    'withholds active %s participant results',
+    async (type) => {
+      const target = new RoomsService({
+        room: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, type)),
+        },
+        quizAttempt: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
+        },
+      } as never);
+
+      await expect(
+        target.participantResult('123456', 'player', 'token'),
+      ).rejects.toMatchObject({ code: 'INVALID_ROOM_PHASE', status: 409 });
+    },
+  );
+  it.each([ActivityType.QUIZ, ActivityType.POLL])(
+    'returns revealed %s participant results',
+    async (type) => {
+      const target = new RoomsService({
+        room: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(
+              room(RoomPhase.REVEALED, RoomStatus.ACTIVE, type),
+            ),
+        },
+        quizAttempt: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
+          findMany: jest.fn().mockResolvedValue([]),
+          findUnique: jest.fn().mockResolvedValue({
+            participantId: 'player',
+            score: 0,
+            participant: { displayName: 'Player' },
+          }),
+          count: jest.fn().mockResolvedValue(0),
+        },
+        answer: { groupBy: jest.fn().mockResolvedValue([]) },
+      } as never);
+
+      await expect(
+        target.participantResult('123456', 'player', 'token'),
+      ).resolves.toMatchObject({ phase: RoomPhase.REVEALED });
+    },
+  );
   it('rejects another teacher controlling a room', async () => {
     await expect(
       service(room(RoomPhase.WAITING, RoomStatus.LOBBY)).start(
@@ -129,6 +177,63 @@ describe('RoomsService state machine', () => {
       ],
     });
   });
+  it('returns participant selection without correctness before reveal', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest.fn().mockResolvedValue(room(RoomPhase.ACTIVE)),
+      },
+      participant: { findFirst: jest.fn().mockResolvedValue({ id: 'player' }) },
+      answer: {
+        findFirst: jest.fn().mockResolvedValue({ choiceId: 'c1' }),
+      },
+    } as never);
+
+    const state = await target.state('123456', 'player', 'token');
+    expect(state).toMatchObject({
+      answerSubmitted: true,
+      selectedChoiceId: 'c1',
+    });
+    expect(state).not.toHaveProperty('correctChoiceId');
+  });
+  it('returns correctness only after reveal', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest.fn().mockResolvedValue(room(RoomPhase.REVEALED)),
+      },
+      participant: { findFirst: jest.fn().mockResolvedValue({ id: 'player' }) },
+      answer: {
+        findFirst: jest.fn().mockResolvedValue({ choiceId: 'c1' }),
+      },
+    } as never);
+
+    await expect(
+      target.state('123456', 'player', 'token'),
+    ).resolves.toMatchObject({
+      selectedChoiceId: 'c1',
+      correctChoiceId: 'c1',
+    });
+  });
+  it('acknowledges an answer without disclosing correctness', async () => {
+    const prisma = {
+      room: {
+        findUnique: jest.fn().mockResolvedValue(room(RoomPhase.ACTIVE)),
+      },
+      quizAttempt: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
+        update: jest.fn(),
+      },
+      answer: { create: jest.fn() },
+      $transaction: jest.fn().mockResolvedValue([]),
+    };
+    const result = await new RoomsService(prisma as never).submit(
+      '123456',
+      'player',
+      'token',
+      'c1',
+    );
+    expect(result).toEqual({ accepted: true });
+    expect(result).not.toHaveProperty('correct');
+  });
   it('opens a word cloud with one prompt but rejects a missing prompt', async () => {
     const create = jest.fn().mockResolvedValue({ code: '123456' });
     const target = new RoomsService({
@@ -190,7 +295,192 @@ describe('RoomsService state machine', () => {
       code: 'INVALID_ACTIVITY_ACTION',
     });
   });
+  it('advances a multi-question poll after reveal', async () => {
+    const questions = [
+      { id: 'q1', text: 'First', choices: [{ id: 'c1', isCorrect: false }] },
+      { id: 'q2', text: 'Second', choices: [{ id: 'c2', isCorrect: false }] },
+    ];
+    const update = jest.fn().mockResolvedValue({
+      status: RoomStatus.ACTIVE,
+      phase: RoomPhase.ACTIVE,
+      currentQuestionIndex: 1,
+    });
+    const target = new RoomsService({
+      room: {
+        findUnique: jest.fn().mockResolvedValue({
+          ...room(RoomPhase.REVEALED, RoomStatus.ACTIVE, ActivityType.POLL),
+          quiz: { type: ActivityType.POLL, questions },
+        }),
+        update,
+      },
+    } as never);
+
+    await target.next('123456', 'host');
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: { currentQuestionIndex: 1, phase: RoomPhase.ACTIVE },
+    });
+  });
+  it('reveals poll results without inventing a correct choice', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest.fn().mockResolvedValue({
+          ...room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.POLL),
+          quiz: {
+            type: ActivityType.POLL,
+            questions: [
+              {
+                id: 'q1',
+                text: 'Choose',
+                choices: [{ id: 'c1', text: 'A', isCorrect: true }],
+              },
+            ],
+          },
+        }),
+        update: jest.fn().mockResolvedValue({ phase: RoomPhase.REVEALED }),
+      },
+    } as never);
+
+    await expect(target.reveal('123456', 'host')).resolves.toMatchObject({
+      correctChoiceId: null,
+    });
+  });
+  it('exposes poll distribution only after reveal', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest.fn().mockResolvedValue({
+          ...room(RoomPhase.REVEALED, RoomStatus.ACTIVE, ActivityType.POLL),
+          quiz: {
+            type: ActivityType.POLL,
+            questions: [
+              {
+                id: 'q1',
+                text: 'Choose',
+                choices: [
+                  { id: 'c1', text: 'A', isCorrect: false },
+                  { id: 'c2', text: 'B', isCorrect: false },
+                ],
+              },
+            ],
+          },
+        }),
+      },
+      answer: {
+        groupBy: jest
+          .fn()
+          .mockResolvedValue([{ choiceId: 'c1', _count: { _all: 2 } }]),
+      },
+    } as never);
+
+    await expect(target.result('123456', 'player')).resolves.toMatchObject({
+      activityType: ActivityType.POLL,
+      poll: {
+        responseCount: 2,
+        distribution: [
+          { id: 'c1', count: 2 },
+          { id: 'c2', count: 0 },
+        ],
+      },
+    });
+  });
+  it('bounds the live leaderboard and appends an exact participant rank', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        participantId: 'leader',
+        score: 100,
+        participant: { displayName: 'Leader' },
+      },
+    ]);
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            room(RoomPhase.COMPLETED, RoomStatus.FINISHED, ActivityType.QUIZ),
+          ),
+      },
+      quizAttempt: {
+        findMany,
+        findUnique: jest.fn().mockResolvedValue({
+          participantId: 'player',
+          score: 20,
+          participant: { displayName: 'Player' },
+        }),
+        count: jest.fn().mockResolvedValue(42),
+      },
+    } as never);
+
+    await expect(target.result('123456', 'player')).resolves.toMatchObject({
+      leaderboard: [
+        { rank: 1, displayName: 'Leader', score: 100, isYou: false },
+        { rank: 43, displayName: 'Player', score: 20, isYou: true },
+      ],
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 20 }),
+    );
+  });
+  it('uses attributed word-cloud responders for dashboard completion', async () => {
+    const answerFindMany = jest.fn();
+    const groupBy = jest
+      .fn()
+      .mockResolvedValue([
+        { participantId: 'player-1' },
+        { participantId: null },
+      ]);
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+          ),
+      },
+      participant: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'player-1', displayName: 'Submitted' },
+          { id: 'player-2', displayName: 'Waiting' },
+        ]),
+      },
+      answer: { findMany: answerFindMany },
+      wordCloudEntry: {
+        groupBy,
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'new',
+            text: 'New',
+            _count: { votes: 0 },
+            votes: [],
+          },
+          {
+            id: 'legacy',
+            text: 'Legacy',
+            _count: { votes: 0 },
+            votes: [],
+          },
+        ]),
+      },
+    } as never);
+
+    await expect(target.dashboardState('123456')).resolves.toMatchObject({
+      participants: [
+        { id: 'player-1', status: 'answered' },
+        { id: 'player-2', status: 'waiting' },
+      ],
+      progress: { submitted: 1, participants: 2 },
+    });
+    expect(answerFindMany).not.toHaveBeenCalled();
+    expect(groupBy).toHaveBeenCalledWith({
+      by: ['participantId'],
+      where: {
+        roomId: 'r1',
+        questionId: 'q1',
+        participantId: { not: null },
+      },
+    });
+  });
   it('accepts a player word and returns the synchronized aggregation', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 'entry' });
     const target = new RoomsService({
       room: {
         findUnique: jest
@@ -203,7 +493,7 @@ describe('RoomsService state machine', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
       },
       wordCloudEntry: {
-        create: jest.fn().mockResolvedValue({ id: 'entry' }),
+        create,
         findMany: jest
           .fn()
           .mockResolvedValue([
@@ -216,5 +506,60 @@ describe('RoomsService state machine', () => {
     ).resolves.toEqual([
       expect.objectContaining({ text: 'CatchUp', votes: 2, rank: 1 }),
     ]);
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        roomId: 'r1',
+        questionId: 'q1',
+        participantId: 'player',
+        text: 'CatchUp',
+        normalizedText: 'catchup',
+      },
+    });
+  });
+  it('rejects a second word-cloud response from one participant', async () => {
+    const duplicate = new Prisma.PrismaClientKnownRequestError('Duplicate', {
+      code: 'P2002',
+      clientVersion: 'test',
+    });
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+          ),
+      },
+      quizAttempt: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
+      },
+      wordCloudEntry: {
+        create: jest.fn().mockRejectedValue(duplicate),
+        findFirst: jest.fn().mockResolvedValue({ id: 'existing' }),
+      },
+    } as never);
+
+    await expect(
+      target.submitWord('123456', 'player', 'token', 'Another'),
+    ).rejects.toMatchObject({ code: 'WORD_ALREADY_SUBMITTED' });
+  });
+  it('restores whether a participant submitted the word-cloud response', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+          ),
+      },
+      participant: { findFirst: jest.fn().mockResolvedValue({ id: 'player' }) },
+      wordCloudEntry: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue({ id: 'entry' }),
+      },
+    } as never);
+
+    await expect(
+      target.state('123456', 'player', 'token'),
+    ).resolves.toMatchObject({ wordSubmitted: true });
   });
 });

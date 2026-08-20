@@ -15,14 +15,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   async function submit(form: FormData) {
     setLoading(true);
-    const result = await signIn("credentials", {
-      email: form.get("email"),
-      password: form.get("password"),
-      redirect: false,
-    });
-    setLoading(false);
-    if (result?.error) setError(t("auth.invalidCredentials"));
-    else router.push("/teacher");
+    setError("");
+    try {
+      const result = await signIn("credentials", {
+        email: form.get("email"),
+        password: form.get("password"),
+        redirect: false,
+      });
+      if (result?.error) setError(t("auth.invalidCredentials"));
+      else router.replace("/teacher");
+    } catch {
+      setError(t("errors.REQUEST_FAILED"));
+    } finally {
+      setLoading(false);
+    }
   }
   return (
     <main className="page-shell">
@@ -39,6 +45,7 @@ export default function LoginPage() {
               <input
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
                 className="form-input"
               />
@@ -48,6 +55,7 @@ export default function LoginPage() {
               <input
                 name="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 className="form-input"
               />

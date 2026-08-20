@@ -8,7 +8,7 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
-import { api, ApiError } from "@/lib/api";
+import { api, apiErrorCode, ApiError, type ApiErrorCode } from "@/lib/api";
 
 type Results = {
   room: { code: string; quizTitle: string; phase: string; activityType: "QUIZ" | "POLL" | "WORD_CLOUD" };
@@ -54,31 +54,25 @@ export default function ResultsClient({
 }) {
   const { t } = useTranslation();
   const [results, setResults] = useState<Results>();
-  const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
   const [downloading, setDownloading] = useState("");
-  const message = (e: unknown) =>
-    t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`);
   const load = async () => {
-    setError("");
+    setErrorCode("");
     try {
       setResults(await api<Results>(`/rooms/${code}/results`, {}, token));
-    } catch (e) {
-      setError(message(e));
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     }
   };
   useEffect(() => {
     api<Results>(`/rooms/${code}/results`, {}, token)
       .then(setResults)
-      .catch((e) =>
-        setError(
-          t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-        ),
-      );
-  }, [code, t, token]);
+      .catch((error) => setErrorCode(apiErrorCode(error)));
+  }, [code, token]);
   async function download(format: "csv" | "xlsx") {
     if (downloading) return;
     setDownloading(format);
-    setError("");
+    setErrorCode("");
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms/${code}/results/export.${format}`,
@@ -94,19 +88,19 @@ export default function ResultsClient({
       link.download = `catchup-${code}-results.${format}`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(message(e));
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       setDownloading("");
     }
   }
-  if (error && !results)
+  if (errorCode && !results)
     return (
       <main className="page-shell">
         <div className="page-content">
           <BackButton href={`/teacher/room/${code}`} />
           <p role="alert" className="alert-error mt-4">
-            {error}
+            {t(`errors.${errorCode}`)}
           </p>
           <button onClick={() => void load()} className="btn-secondary mt-3">
             <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
@@ -173,9 +167,9 @@ export default function ResultsClient({
             </button>
           </span>
         </div>
-        {error && (
+        {errorCode && (
           <p role="alert" className="alert-error mt-3">
-            {error}
+            {t(`errors.${errorCode}`)}
           </p>
         )}
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

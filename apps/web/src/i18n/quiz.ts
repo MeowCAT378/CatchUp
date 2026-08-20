@@ -27,6 +27,7 @@ export const quiz = {
       deleteQuestionConfirm: "ต้องการลบคำถามนี้หรือไม่?",
       cancel: "ยกเลิก",
       noDescription: "ไม่มีคำอธิบาย",
+      addQuestionBeforeRoom: "เพิ่มคำถามก่อนเปิดห้อง",
     },
   },
   en: {
@@ -57,6 +58,7 @@ export const quiz = {
       deleteQuestionConfirm: "Delete this question?",
       cancel: "Cancel",
       noDescription: "No description",
+      addQuestionBeforeRoom: "Add a question before opening a room",
     },
   },
 };

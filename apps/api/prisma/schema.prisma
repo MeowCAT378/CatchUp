@@ -92,6 +92,7 @@ model Participant {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   displayName String
   attempts QuizAttempt[]
+  wordCloudEntries WordCloudEntry[]
   wordCloudVotes WordCloudVote[]
   joinedAt DateTime @default(now())
   @@unique([roomId, displayName])
@@ -126,12 +127,17 @@ model WordCloudEntry {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   questionId String
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  /// Legacy rows may be null because their creator was not recorded; new writes always set this.
+  participantId String?
+  participant Participant? @relation(fields: [participantId], references: [id], onDelete: Cascade)
   text String
   normalizedText String
   votes WordCloudVote[]
   createdAt DateTime @default(now())
   @@unique([roomId, questionId, normalizedText])
+  @@unique([roomId, questionId, participantId])
   @@index([roomId, questionId])
+  @@index([participantId])
 }
 model WordCloudVote {
   id String @id @default(cuid())

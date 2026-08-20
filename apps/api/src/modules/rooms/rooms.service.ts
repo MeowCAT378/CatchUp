@@ -11,6 +11,9 @@ import {
   promptRequirementError,
   roomActions,
 } from './activity-lifecycle';
+
+const LIVE_LEADERBOARD_LIMIT = 20;
+
 @Injectable()
 export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,7 +49,7 @@ export class RoomsService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const participant = await tx.participant.create({
-          data: { roomId: room.id, displayName },
+          data: { roomId: room.id, displayName: displayName.trim() },
         });
         const attempt = await tx.quizAttempt.create({
           data: { roomId: room.id, participantId: participant.id },
@@ -97,6 +100,27 @@ export class RoomsService {
       question && lifecycle.canSubmitWord
         ? await this.wordCloudEntries(room.id, question.id, participantId)
         : [];
+    const selectedAnswer =
+      participantId && question && lifecycle.canSubmitChoice
+        ? await this.prisma.answer.findFirst({
+            where: {
+              attempt: { participantId, roomId: room.id },
+              questionId: question.id,
+            },
+            select: { choiceId: true },
+          })
+        : null;
+    const wordSubmitted = Boolean(
+      participantId && question && lifecycle.canSubmitWord
+        ? await this.prisma.wordCloudEntry.findFirst({
+            where: { roomId: room.id, questionId: question.id, participantId },
+            select: { id: true },
+          })
+        : null,
+    );
+    const revealsCorrectChoice =
+      lifecycle.requiresCorrectChoice &&
+      (room.phase === RoomPhase.REVEALED || room.phase === RoomPhase.COMPLETED);
     return {
       code: room.code,
       status: room.status,
@@ -118,16 +142,15 @@ export class RoomsService {
               ),
             }
           : null,
-      answerSubmitted: participantId
-        ? Boolean(
-            await this.prisma.answer.findFirst({
-              where: {
-                attempt: { participantId, roomId: room.id },
-                questionId: question?.id,
-              },
-            }),
-          )
-        : false,
+      answerSubmitted: Boolean(selectedAnswer),
+      selectedChoiceId: selectedAnswer?.choiceId ?? null,
+      wordSubmitted,
+      ...(revealsCorrectChoice
+        ? {
+            correctChoiceId:
+              question?.choices.find((choice) => choice.isCorrect)?.id ?? null,
+          }
+        : {}),
     };
   }
   async start(code: string, hostId: string) {
@@ -165,8 +188,9 @@ export class RoomsService {
         where: { id: room.id },
         data: { phase: RoomPhase.REVEALED },
       }),
-      correctChoiceId:
-        question.choices.find((choice) => choice.isCorrect)?.id ?? null,
+      correctChoiceId: activityLifecycle(room.quiz.type).requiresCorrectChoice
+        ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null)
+        : null,
     };
   }
   async next(code: string, hostId: string) {
@@ -263,10 +287,7 @@ export class RoomsService {
           },
         }),
       ]);
-      return {
-        correct:
-          activityLifecycle(room.quiz.type).scoresAnswers && choice.isCorrect,
-      };
+      return { accepted: true };
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -308,6 +329,7 @@ export class RoomsService {
         data: {
           roomId: room.id,
           questionId: question.id,
+          participantId,
           text: display,
           normalizedText,
         },
@@ -316,8 +338,20 @@ export class RoomsService {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
-      )
+      ) {
+        if (
+          await this.prisma.wordCloudEntry.findFirst({
+            where: { roomId: room.id, questionId: question.id, participantId },
+            select: { id: true },
+          })
+        )
+          throw new AppError(
+            'WORD_ALREADY_SUBMITTED',
+            409,
+            'Word cloud response already submitted',
+          );
         throw new AppError('DUPLICATE_ENTRY', 409, 'That entry already exists');
+      }
       throw error;
     }
     return this.wordCloudEntries(room.id, question.id, participantId);
@@ -375,26 +409,82 @@ export class RoomsService {
   }
   async result(code: string, participantId?: string) {
     const room = await this.room(code);
-    if (!activityLifecycle(room.quiz.type).scoresAnswers)
-      return { activityType: room.quiz.type, leaderboard: [] };
+    if (!activityLifecycle(room.quiz.type).scoresAnswers) {
+      const question = room.quiz.questions[room.currentQuestionIndex];
+      const visiblePoll =
+        room.quiz.type === ActivityType.POLL &&
+        question &&
+        (room.phase === RoomPhase.REVEALED ||
+          room.phase === RoomPhase.COMPLETED);
+      const answerCounts = visiblePoll
+        ? await this.prisma.answer.groupBy({
+            by: ['choiceId'],
+            where: { questionId: question.id, attempt: { roomId: room.id } },
+            _count: { _all: true },
+          })
+        : [];
+      const countByChoice = new Map(
+        answerCounts.map((answer) => [answer.choiceId, answer._count._all]),
+      );
+      return {
+        status: room.status,
+        phase: room.phase,
+        activityType: room.quiz.type,
+        leaderboard: [],
+        poll: visiblePoll
+          ? {
+              questionId: question.id,
+              text: question.text,
+              responseCount: answerCounts.reduce(
+                (total, answer) => total + answer._count._all,
+                0,
+              ),
+              distribution: question.choices.map((choice) => ({
+                id: choice.id,
+                text: choice.text,
+                count: countByChoice.get(choice.id) ?? 0,
+              })),
+            }
+          : null,
+      };
+    }
     const leaderboard = await this.prisma.quizAttempt.findMany({
       where: { roomId: room.id },
       include: { participant: true },
       orderBy: { score: 'desc' },
-      take: 20,
+      take: LIVE_LEADERBOARD_LIMIT,
     });
+    const rankedLeaderboard = competitionRanks(
+      leaderboard,
+      (attempt) => attempt.score,
+    ).map(({ item: attempt, rank }) => ({
+      rank,
+      displayName: attempt.participant.displayName,
+      score: attempt.score,
+      isYou: attempt.participantId === participantId,
+    }));
+    if (participantId && !rankedLeaderboard.some((entry) => entry.isYou)) {
+      const ownAttempt = await this.prisma.quizAttempt.findUnique({
+        where: {
+          roomId_participantId: { roomId: room.id, participantId },
+        },
+        include: { participant: true },
+      });
+      if (ownAttempt)
+        rankedLeaderboard.push({
+          rank:
+            (await this.prisma.quizAttempt.count({
+              where: { roomId: room.id, score: { gt: ownAttempt.score } },
+            })) + 1,
+          displayName: ownAttempt.participant.displayName,
+          score: ownAttempt.score,
+          isYou: true,
+        });
+    }
     return {
       status: room.status,
       phase: room.phase,
-      leaderboard: competitionRanks(
-        leaderboard,
-        (attempt) => attempt.score,
-      ).map(({ item: attempt, rank }) => ({
-        rank,
-        displayName: attempt.participant.displayName,
-        score: attempt.score,
-        isYou: attempt.participantId === participantId,
-      })),
+      leaderboard: rankedLeaderboard,
     };
   }
   async participantResult(
@@ -410,6 +500,16 @@ export class RoomsService {
         'Participant is not in this room',
       );
     await this.participantAttempt(room.id, participantId, participantToken);
+    if (
+      activityLifecycle(room.quiz.type).canSubmitChoice &&
+      room.phase !== RoomPhase.REVEALED &&
+      room.phase !== RoomPhase.COMPLETED
+    )
+      throw new AppError(
+        'INVALID_ROOM_PHASE',
+        409,
+        'Results are available after the question is revealed',
+      );
     return this.result(code, participantId);
   }
   async socketAccess(
@@ -440,20 +540,6 @@ export class RoomsService {
       displayName: participant.displayName,
     };
   }
-  async progress(code: string) {
-    const room = await this.room(code);
-    const question = room.quiz.questions[room.currentQuestionIndex];
-    return {
-      submitted: question
-        ? await this.prisma.answer.count({
-            where: { questionId: question.id, attempt: { roomId: room.id } },
-          })
-        : 0,
-      participants: await this.prisma.participant.count({
-        where: { roomId: room.id },
-      }),
-    };
-  }
   async dashboard(code: string, hostId: string) {
     await this.hostRoom(code, hostId);
     return this.dashboardState(code);
@@ -465,19 +551,35 @@ export class RoomsService {
       where: { roomId: room.id },
       orderBy: { joinedAt: 'asc' },
     });
-    const answers = question
-      ? await this.prisma.answer.findMany({
-          where: { questionId: question.id, attempt: { roomId: room.id } },
-          select: {
-            choiceId: true,
-            attempt: { select: { participantId: true } },
-          },
-        })
-      : [];
-    const answered = new Set(
-      answers.map((answer) => answer.attempt.participantId),
-    );
     const lifecycle = activityLifecycle(room.quiz.type);
+    const answers =
+      question && lifecycle.canSubmitChoice
+        ? await this.prisma.answer.findMany({
+            where: { questionId: question.id, attempt: { roomId: room.id } },
+            select: {
+              choiceId: true,
+              attempt: { select: { participantId: true } },
+            },
+          })
+        : [];
+    const wordResponders =
+      question && lifecycle.canSubmitWord
+        ? await this.prisma.wordCloudEntry.groupBy({
+            by: ['participantId'],
+            where: {
+              roomId: room.id,
+              questionId: question.id,
+              participantId: { not: null },
+            },
+          })
+        : [];
+    const answered = new Set(
+      lifecycle.canSubmitWord
+        ? wordResponders.flatMap(({ participantId }) =>
+            participantId ? [participantId] : [],
+          )
+        : answers.map((answer) => answer.attempt.participantId),
+    );
     const entries =
       question && lifecycle.canSubmitWord
         ? await this.wordCloudEntries(room.id, question.id)
@@ -491,7 +593,7 @@ export class RoomsService {
         status: answered.has(participant.id) ? 'answered' : 'waiting',
       })),
       progress: {
-        submitted: lifecycle.canSubmitWord ? entries.length : answers.length,
+        submitted: answered.size,
         participants: participants.length,
       },
       distribution:

@@ -1,3 +1,4 @@
+import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { JoinRoomDto } from './dto';
 describe('room DTOs', () => {
@@ -14,5 +15,20 @@ describe('room DTOs', () => {
       });
       expect((await validate(invalid)).length).toBeGreaterThan(0);
     }
+  });
+
+  it('trims participant names and limits them to 40 characters', async () => {
+    const trimmed = plainToInstance(JoinRoomDto, {
+      code: '482731',
+      displayName: '  Student  ',
+    });
+    expect(await validate(trimmed)).toHaveLength(0);
+    expect(trimmed.displayName).toBe('Student');
+
+    const tooLong = plainToInstance(JoinRoomDto, {
+      code: '482731',
+      displayName: 'x'.repeat(41),
+    });
+    expect((await validate(tooLong)).length).toBeGreaterThan(0);
   });
 });

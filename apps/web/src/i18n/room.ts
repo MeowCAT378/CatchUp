@@ -6,6 +6,7 @@ export const room = {
       join: "เข้าร่วม",
       start: "เริ่ม",
       reveal: "เฉลย",
+      showResults: "แสดงผลสำรวจ",
       next: "ถัดไป",
       complete: "จบแบบทดสอบ",
       qrJoin: "สแกนเพื่อเข้าร่วม",
@@ -22,6 +23,9 @@ export const room = {
       ACTIVE: "กำลังดำเนินการ",
       REVEALED: "เฉลยแล้ว",
       COMPLETED: "เสร็จสิ้น",
+      completeConfirmTitle: "จบกิจกรรมนี้หรือไม่?",
+      completeConfirmMessage:
+        "ผู้เข้าร่วมจะส่งคำตอบเพิ่มไม่ได้หลังจากจบกิจกรรม",
     },
   },
   en: {
@@ -31,6 +35,7 @@ export const room = {
       join: "Join",
       start: "Start",
       reveal: "Reveal",
+      showResults: "Show results",
       next: "Next",
       complete: "Complete quiz",
       qrJoin: "Scan to join",
@@ -48,6 +53,9 @@ export const room = {
       ACTIVE: "Active",
       REVEALED: "Revealed",
       COMPLETED: "Completed",
+      completeConfirmTitle: "End this activity?",
+      completeConfirmMessage:
+        "Participants cannot submit more responses after the activity ends.",
     },
   },
 };

@@ -89,13 +89,13 @@ html[lang="th"] {
     @apply rounded-2xl border border-white/70 bg-white/50 p-4 shadow-sm backdrop-blur-xl transition duration-200 hover:shadow-[0_8px_24px_rgba(39,92,115,0.12)];
   }
   .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-cyan-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,116,144,0.24)] transition duration-200 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-700 via-cyan-700 to-teal-700 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,116,144,0.24)] transition duration-200 hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-secondary {
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-neutral-100 px-5 py-2.5 text-sm font-semibold text-[#1d1d1f] transition duration-200 hover:bg-neutral-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .back-button {
-    @apply inline-flex min-h-10 self-start items-center gap-1.5 rounded-full bg-white/60 px-4 py-2 text-sm font-medium text-[#1d1d1f] shadow-sm backdrop-blur-xl transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 self-start items-center gap-1.5 rounded-full bg-white/60 px-4 py-2 text-sm font-medium text-[#1d1d1f] shadow-sm backdrop-blur-xl transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .form-input {
     @apply mt-1 min-h-12 w-full rounded-xl border px-4 py-3 shadow-sm outline-none transition focus:border-neutral-400 focus:ring-4 focus:ring-black/[0.05];

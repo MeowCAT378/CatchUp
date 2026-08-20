@@ -29,8 +29,8 @@ const lifecycles: Record<ActivityType, ActivityLifecycle> = {
     requiresCorrectChoice: false,
     canSubmitChoice: true,
     canSubmitWord: false,
-    canReveal: false,
-    canAdvance: false,
+    canReveal: true,
+    canAdvance: true,
     scoresAnswers: false,
   },
   [ActivityType.WORD_CLOUD]: {

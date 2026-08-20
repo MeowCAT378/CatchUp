@@ -13,6 +13,7 @@ export default function JoinPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -23,8 +24,14 @@ export default function JoinPage() {
       .slice(0, 6);
     queueMicrotask(() => setCode(initialCode));
   }, []);
-  async function submit(form: FormData) {
+  async function submit() {
+    const name = displayName.trim();
+    if (name.length < 2 || name.length > 40) {
+      setError(t("errors.VALIDATION_ERROR"));
+      return;
+    }
     setLoading(true);
+    setError("");
     try {
       const joined = await api<{
         participantId: string;
@@ -32,7 +39,7 @@ export default function JoinPage() {
         roomCode: string;
       }>("/rooms/join", {
         method: "POST",
-        body: JSON.stringify({ code, displayName: form.get("displayName") }),
+        body: JSON.stringify({ code, displayName: name }),
       });
       saveParticipant(joined.roomCode, {
         id: joined.participantId,
@@ -73,8 +80,21 @@ export default function JoinPage() {
             </label>
             <label className="font-medium">
               {t("player.displayName")}
-              <input name="displayName" required className="form-input" />
+              <input
+                name="displayName"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value.slice(0, 40))}
+                minLength={2}
+                maxLength={40}
+                autoComplete="name"
+                aria-describedby="display-name-hint"
+                required
+                className="form-input"
+              />
             </label>
+            <p id="display-name-hint" className="-mt-2 text-sm text-slate-600">
+              {t("player.joinHint")}
+            </p>
             <button disabled={loading} className="btn-primary">
               <UsersIcon className="h-5 w-5" aria-hidden="true" />
               {loading ? t("common.loading") : t("room.join")}

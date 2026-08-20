@@ -1,10 +1,18 @@
+import { Transform } from 'class-transformer';
 import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
+
+const trim = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
 export class CreateRoomDto {
   @IsString() quizId!: string;
 }
 export class JoinRoomDto {
   @IsString() @Matches(/^\d{6}$/) code!: string;
-  @IsString() @MinLength(2) displayName!: string;
+  @Transform(trim)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(40)
+  displayName!: string;
 }
 export class SubmitAnswerDto {
   @IsString() participantId!: string;

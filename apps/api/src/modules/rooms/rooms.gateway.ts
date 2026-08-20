@@ -25,9 +25,19 @@ type SocketData = {
   participantToken?: string;
   role?: 'host' | 'participant';
 };
+
+export const socketCorsOrigin = (
+  origin: string | undefined,
+  callback: (error: Error | null, allowed?: boolean) => void,
+) => {
+  const configuredOrigin =
+    process.env.WEB_ORIGIN?.trim() || 'http://localhost:3000';
+  callback(null, origin === undefined || origin === configuredOrigin);
+};
+
 @WebSocketGateway({
   namespace: '/rooms',
-  cors: { origin: process.env.WEB_ORIGIN ?? 'http://localhost:3000' },
+  cors: { origin: socketCorsOrigin },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server!: Server;
@@ -155,9 +165,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           body.participantToken,
         ),
       );
-      this.server
-        .to(this.hostGroup(body.code))
-        .emit(RoomEvents.answerProgress, await this.rooms.progress(body.code));
       await this.dashboard(body.code);
     } catch (error) {
       this.error(client, error);
@@ -290,7 +297,15 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       )
         throw new ForbiddenException();
       await action();
-      this.server
+      client.emit(
+        RoomEvents.state,
+        await this.rooms.state(
+          body.code,
+          body.participantId,
+          body.participantToken,
+        ),
+      );
+      client
         .to(this.group(body.code))
         .emit(RoomEvents.wordCloudUpdated, await this.rooms.state(body.code));
       await this.dashboard(body.code);

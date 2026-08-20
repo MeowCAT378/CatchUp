@@ -7,6 +7,7 @@ export function Logo({ className = "h-14 w-auto" }: { className?: string }) {
       alt="CatchUp"
       width={1254}
       height={1254}
+      preload
       className={`object-contain ${className}`}
     />
   );

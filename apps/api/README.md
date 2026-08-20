@@ -1,98 +1,83 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# CatchUp API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS, Prisma, and PostgreSQL backend for CatchUp. The API listens on port
+`3001` by default and accepts browser and Socket.io traffic from the configured
+`WEB_ORIGIN` (normally `http://localhost:3000`).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Local setup
 
-## Description
+1. From the repository root, copy `.env.example` to `.env`, set the required
+   Docker credentials, and start PostgreSQL:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+   ```bash
+   docker compose -f docker-compose.dev.yml up -d postgres
+   ```
 
-## Project setup
+2. In this directory, install dependencies and copy `.env.example` to `.env`.
+   Set `DATABASE_URL` to match the root Docker credentials and set a long,
+   deployment-only `JWT_SECRET` with at least 32 characters.
 
-```bash
-$ npm install
-```
+3. Prepare the database and start the API:
 
-## Compile and run the project
+   ```bash
+   npm install
+   npx prisma generate
+   npx prisma migrate deploy
+   npm run dev
+   ```
 
-```bash
-# development
-$ npm run start
+Use `npx prisma migrate dev` instead of `migrate deploy` when authoring a new
+development migration.
 
-# watch mode
-$ npm run start:dev
+## Development seed
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+Set `CATCHUP_SEED_PASSWORD` in the local API `.env` to at least 12
+non-whitespace characters, then run:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run seed
 ```
 
-## Deployment
+The seed is idempotent and runs only when `NODE_ENV` is explicitly
+`development` or `test`. It fails closed for missing or other environment
+values and never prints the supplied password.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Verification
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run lint
+npm test
+npm run test:seed
+npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+`npm run lint` is read-only. Use `npm run lint:fix` only when you intend to
+rewrite files.
 
-## Resources
+For PostgreSQL E2E tests, start the isolated test service from this directory:
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+docker compose -f ../../docker-compose.dev.yml --profile test up -d postgres-test
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Set `CATCHUP_TEST_DATABASE_URL` in the current shell to the value documented in
+`.env.test.example`, then run:
 
-## Support
+```bash
+npm run test:e2e:setup
+npm run test:e2e
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+The guarded runner refuses any database URL whose database name does not
+contain `test`. Browser E2E scripts additionally require the API and web app to
+be running.
 
-## Stay in touch
+## Local ports
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| Service | Address |
+| --- | --- |
+| API | `http://localhost:3001` |
+| Web origin | `http://localhost:3000` |
+| PostgreSQL | `127.0.0.1:5434` |
+| Test PostgreSQL | `127.0.0.1:5433` |
+| pgAdmin | `http://127.0.0.1:5050` |

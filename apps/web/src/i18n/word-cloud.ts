@@ -11,6 +11,8 @@ export const wordCloud = {
       promptNotConfigured: "ยังไม่ได้ตั้งค่าคำถาม",
       prompts: "1 คำถาม",
       responseAdded: "เพิ่มคำตอบแล้ว รอให้ผู้จัดกิจกรรมจบกิจกรรม",
+      responseHint: "สูงสุด 30 ตัวอักษร ส่งได้คนละ 1 คำตอบ",
+      voted: "โหวตแล้ว",
     },
   },
   en: {
@@ -25,6 +27,8 @@ export const wordCloud = {
       promptNotConfigured: "Prompt not configured",
       prompts: "1 prompt",
       responseAdded: "Response added. Wait for the host to end the activity.",
+      responseHint: "Maximum 30 characters; one response per participant",
+      voted: "Voted",
     },
   },
 };

@@ -213,15 +213,11 @@ export class QuizzesService {
     if (!question)
       throw new AppError('QUESTION_NOT_FOUND', 404, 'Question not found');
     if (question.quiz.ownerId !== ownerId) throw new ForbiddenException();
-    if (
-      question.quiz.type &&
-      activityLifecycle(question.quiz.type).maxPrompts === 1 &&
-      question.quiz._count?.rooms
-    )
+    if (question.quiz._count.rooms)
       throw new AppError(
         'ACTIVITY_IN_USE',
         409,
-        'Word cloud prompts cannot be changed after a room is created',
+        'Questions cannot be changed after a room is created',
       );
     return this.prisma.$transaction(async (tx) => {
       await tx.question.delete({ where: { id } });

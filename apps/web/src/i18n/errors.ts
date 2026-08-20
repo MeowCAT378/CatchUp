@@ -13,6 +13,7 @@ export const errors = {
       INVALID_ACTIVITY_ACTION: "กิจกรรมนี้ไม่รองรับการทำรายการนี้",
       WORD_CLOUD_PROMPT_REQUIRED: "Word Cloud ต้องตั้งค่าคำถามก่อนเปิดห้อง",
       WORD_CLOUD_PROMPT_ALREADY_CONFIGURED: "Word Cloud มีคำถามได้เพียงหนึ่งข้อ",
+      WORD_ALREADY_SUBMITTED: "คุณส่งคำตอบ Word Cloud แล้ว",
       ALREADY_ANSWERED: "คุณตอบคำถามนี้แล้ว",
       QUESTION_HAS_RESPONSES: "คำถามนี้มีคำตอบแล้ว",
       ACTIVITY_IN_USE: "ไม่สามารถแก้ไขคำถามหลังจากเปิดห้องแล้ว",
@@ -41,6 +42,7 @@ export const errors = {
         "Configure the Word Cloud prompt before opening a room",
       WORD_CLOUD_PROMPT_ALREADY_CONFIGURED:
         "A Word Cloud can have exactly one prompt",
+      WORD_ALREADY_SUBMITTED: "You have already submitted a Word Cloud response",
       ALREADY_ANSWERED: "You have already answered this question",
       QUESTION_HAS_RESPONSES: "This question already has responses",
       ACTIVITY_IN_USE: "Questions cannot be changed after a room is created",

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { CheckIcon, PencilSquareIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
-import { api, ApiError } from "@/lib/api";
+import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 
 type Quiz = {
   title: string;
@@ -32,7 +32,7 @@ export default function QuizEditor({
   const [text, setText] = useState("");
   const [choices, setChoices] = useState(["", "", "", ""]);
   const [correctIndex, setCorrectIndex] = useState(0);
-  const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string>();
   const [deleting, setDeleting] = useState<string>();
@@ -45,10 +45,8 @@ export default function QuizEditor({
       setQuiz(loaded);
       setTitle(loaded.title);
       setDescription(loaded.description ?? "");
-    } catch (e) {
-      setError(
-        t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-      );
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     }
   };
   useEffect(() => {
@@ -58,16 +56,12 @@ export default function QuizEditor({
         setTitle(loaded.title);
         setDescription(loaded.description ?? "");
       })
-      .catch((e) =>
-        setError(
-          t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-        ),
-      );
-  }, [quizId, t, token]);
+      .catch((error) => setErrorCode(apiErrorCode(error)));
+  }, [quizId, token]);
   async function saveMetadata() {
     if (!title.trim() || saving) return;
     setSaving(true);
-    setError("");
+    setErrorCode("");
     try {
       await api(
         `/quizzes/${quizId}`,
@@ -78,8 +72,8 @@ export default function QuizEditor({
         token,
       );
       setQuiz((current) => current && { ...current, title: title.trim(), description: description.trim() });
-    } catch (e) {
-      setError(t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`));
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       setSaving(false);
     }
@@ -89,7 +83,7 @@ export default function QuizEditor({
     if (!text.trim() || (needsChoices && choices.some((choice) => !choice.trim())) || saving)
       return;
     setSaving(true);
-    setError("");
+    setErrorCode("");
     try {
       await api(
         editingId ? `/quizzes/questions/${editingId}` : `/quizzes/${quizId}/questions`,
@@ -110,10 +104,8 @@ export default function QuizEditor({
       setCorrectIndex(0);
       setEditingId(undefined);
       await load();
-    } catch (e) {
-      setError(
-        t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`),
-      );
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
     } finally {
       setSaving(false);
     }
@@ -134,13 +126,15 @@ export default function QuizEditor({
   async function remove(questionId: string) {
     if (deleting) return;
     setDeleting(questionId);
-    setError("");
+    setErrorCode("");
     try {
       await api(`/quizzes/questions/${questionId}`, { method: "DELETE" }, token);
+      if (editingId === questionId) cancelEdit();
       await load();
       setConfirming(undefined);
-    } catch (e) {
-      setError(t(`errors.${e instanceof ApiError ? e.code : "REQUEST_FAILED"}`));
+    } catch (error) {
+      setErrorCode(apiErrorCode(error));
+      setConfirming(undefined);
     } finally {
       setDeleting(undefined);
     }
@@ -153,6 +147,11 @@ export default function QuizEditor({
           {quiz?.title ?? t("quiz.quizEditor")}
         </h1>
         {quiz && <div className="mt-3"><ActivityTypeBadge type={quiz.type} /></div>}
+        {quiz && errorCode && (
+          <p role="alert" className="alert-error mt-4">
+            {t(`errors.${errorCode}`)}
+          </p>
+        )}
         {quiz && <section className="panel mt-6">
           <label className="block text-sm font-semibold" htmlFor="quiz-title">{t("quiz.quizTitle")}</label>
           <input id="quiz-title" value={title} onChange={(event) => setTitle(event.target.value)} className="form-input" />
@@ -222,20 +221,15 @@ export default function QuizEditor({
             {saving ? t("quiz.saving") : editingId ? t("common.save") : isWordCloud ? t("wordCloud.prompt") : t("quiz.addQuestion")}
           </button>
           {editingId && <button type="button" onClick={cancelEdit} disabled={saving} className="btn-secondary mt-5 ml-3">{t("common.cancel")}</button>}
-          {error && (
-            <p role="alert" className="alert-error mt-4">
-              {error}
-            </p>
-          )}
         </section>}
         {!quiz ? (
-          error ? <p role="alert" className="alert-error mt-6">{error}</p> : <p className="mt-6">{t("common.loading")}</p>
+          errorCode ? <p role="alert" className="alert-error mt-6">{t(`errors.${errorCode}`)}</p> : <p className="mt-6">{t("common.loading")}</p>
         ) : (
           <ol className="mt-6 grid gap-4">
             {quiz.questions.length ? (
               quiz.questions.map((question) => (
                 <li key={question.id} className="soft-card">
-                  <div className="flex items-start justify-between gap-3"><strong className="text-lg font-semibold text-[#1d1d1f]">{question.text}</strong><span className="flex flex-wrap gap-2"><button type="button" disabled={Boolean(deleting)} onClick={() => edit(question)} className="btn-secondary min-h-10 px-3 py-1 text-sm"><PencilSquareIcon className="h-5 w-5" aria-hidden="true" />{t("common.edit")}</button><button type="button" disabled={Boolean(deleting)} onClick={() => setConfirming(question.id)} className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><TrashIcon className="h-5 w-5" aria-hidden="true" />{t("quiz.deleteQuestion")}</button></span></div>
+                  <div className="flex items-start justify-between gap-3"><strong className="text-lg font-semibold text-[#1d1d1f]">{question.text}</strong><span className="flex flex-wrap gap-2"><button type="button" disabled={Boolean(deleting)} onClick={() => edit(question)} className="btn-secondary min-h-11 px-3 py-1 text-sm"><PencilSquareIcon className="h-5 w-5" aria-hidden="true" />{t("common.edit")}</button><button type="button" disabled={Boolean(deleting)} onClick={() => setConfirming(question.id)} className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><TrashIcon className="h-5 w-5" aria-hidden="true" />{t("quiz.deleteQuestion")}</button></span></div>
                   {quiz.type !== "WORD_CLOUD" && <ul className="mt-3 grid gap-2">
                     {question.choices.map((choice) => (
                       <li

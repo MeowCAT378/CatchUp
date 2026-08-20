@@ -1,12 +1,42 @@
 const { PrismaClient, RoomPhase, RoomStatus } = require('@prisma/client');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
+const ALLOWED_SEED_ENVIRONMENTS = new Set(['development', 'test']);
+
+function assertSeedEnvironment(value) {
+  const environment = value?.trim().toLowerCase();
+  if (!environment || !ALLOWED_SEED_ENVIRONMENTS.has(environment)) {
+    throw new Error(
+      'Database seeding requires NODE_ENV to be explicitly set to development or test',
+    );
+  }
+}
 
 async function main() {
-  const passwordHash = await bcrypt.hash('123456789', 12);
+  assertSeedEnvironment(process.env.NODE_ENV);
 
-  for (let index = 1; index <= 5; index++) {
+  const adminEmail = process.env.CATCHUP_SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.CATCHUP_SEED_ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword?.trim()) {
+    throw new Error(
+      'CATCHUP_SEED_ADMIN_EMAIL and CATCHUP_SEED_ADMIN_PASSWORD must be set',
+    );
+  }
+
+  const accounts = [
+    { email: adminEmail, name: 'admin', password: adminPassword, role: 'ADMIN' },
+    ...Array.from({ length: 4 }, (_, offset) => ({
+      email: `host${offset + 2}@catchup.local`,
+      name: `Mock Host ${offset + 2}`,
+      password: crypto.randomBytes(18).toString('base64url'),
+      role: 'HOST',
+    })),
+  ];
+
+  for (const [offset, account] of accounts.entries()) {
+    const index = offset + 1;
     const suffix = String(index);
     const userId = `seed-user-${suffix}`;
     const quizId = `seed-quiz-${suffix}`;
@@ -16,24 +46,21 @@ async function main() {
     const participantId = `seed-participant-${suffix}`;
     const attemptId = `seed-attempt-${suffix}`;
     const answerId = `seed-answer-${suffix}`;
-    const isAdmin = index === 1;
-    const email = isAdmin ? 'admin@admin.com' : `host${suffix}@catchup.local`;
-    const name = isAdmin ? 'admin' : `Mock Host ${suffix}`;
+    const passwordHash = await bcrypt.hash(account.password, 12);
 
     await prisma.user.upsert({
-      where: { id: userId },
+      where: { email: account.email },
       update: {
-        email,
-        name,
+        name: account.name,
         passwordHash,
-        role: 'HOST',
+        role: account.role,
       },
       create: {
         id: userId,
-        email,
-        name,
+        email: account.email,
+        name: account.name,
         passwordHash,
-        role: 'HOST',
+        role: account.role,
       },
     });
 
@@ -150,15 +177,27 @@ async function main() {
       },
     });
   }
+
+  console.log('CatchUp development database seeded.\n\nAdmin:');
+  console.log(`Email: ${adminEmail}`);
+  console.log('Password: [loaded from CATCHUP_SEED_ADMIN_PASSWORD]');
+  for (const [offset, account] of accounts.slice(1).entries()) {
+    console.log(`\nMock Host ${offset + 2}:`);
+    console.log(`Email: ${account.email}`);
+    console.log(`Password: ${account.password}`);
+  }
 }
 
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-    console.log('Seeded 5 mock rows for every table. Mock user password: 123456789');
-  })
-  .catch(async (error) => {
-    console.error(error);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+if (require.main === module) {
+  main()
+    .then(async () => {
+      await prisma.$disconnect();
+    })
+    .catch(async (error) => {
+      console.error(error);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
+}
+
+module.exports = { assertSeedEnvironment };

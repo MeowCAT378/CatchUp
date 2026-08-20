@@ -2,9 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
-  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -75,8 +75,8 @@ export class RoomsController {
   }
   @Get(':code') state(
     @Param('code') code: string,
-    @Query('participantId') participantId?: string,
-    @Query('participantToken') participantToken?: string,
+    @Headers('x-participant-id') participantId?: string,
+    @Headers('x-participant-token') participantToken?: string,
   ) {
     return this.rooms.state(code, participantId, participantToken);
   }
@@ -127,8 +127,8 @@ export class RoomsController {
   }
   @Get(':code/result') result(
     @Param('code') code: string,
-    @Query('participantId') participantId?: string,
-    @Query('participantToken') participantToken?: string,
+    @Headers('x-participant-id') participantId?: string,
+    @Headers('x-participant-token') participantToken?: string,
   ) {
     return this.rooms.participantResult(code, participantId, participantToken);
   }

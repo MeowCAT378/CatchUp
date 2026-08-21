@@ -1,1 +1,13 @@
-import { getServerSession } from 'next-auth'; import { authOptions } from '@/auth'; import { redirect } from 'next/navigation'; import HostRoom from './host-room'; export default async function RoomPage({ params }: { params: Promise<{ code: string }> }) { const session = await getServerSession(authOptions); if (!session) redirect('/login'); return <HostRoom token={session.accessToken} code={(await params).code} />; }
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import { redirect } from "next/navigation";
+import HostRoom from "./host-room";
+export default async function RoomPage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+  return <HostRoom token={session.accessToken} code={(await params).code} />;
+}

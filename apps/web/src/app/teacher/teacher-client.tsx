@@ -16,7 +16,12 @@ import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { Logo } from "@/components/logo";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
-type Quiz = { id: string; title: string; type: ActivityType; _count: { questions: number } };
+type Quiz = {
+  id: string;
+  title: string;
+  type: ActivityType;
+  _count: { questions: number };
+};
 export default function TeacherClient({ token }: { token: string }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -124,37 +129,71 @@ export default function TeacherClient({ token }: { token: string }) {
           </div>
         </div>
         <section className="panel mt-8">
-          {!type ? <div className="grid gap-3 sm:grid-cols-3">
-            {([
-              ["QUIZ", QuestionMarkCircleIcon],
-              ["POLL", ChartBarIcon],
-              ["WORD_CLOUD", ChatBubbleLeftRightIcon],
-            ] as const).map(([activityType, Icon]) => (
-              <button key={activityType} type="button" onClick={() => setType(activityType)} className="soft-card text-left hover:-translate-y-0.5">
-                <Icon className="h-7 w-7 text-neutral-700" aria-hidden="true" />
-                <strong className="mt-3 block text-lg text-[#1d1d1f]">{t(`activity.${activityType}.name`)}</strong>
-                <span className="mt-1 block text-sm text-neutral-500">{t(`activity.${activityType}.description`)}</span>
+          {!type ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(
+                [
+                  ["QUIZ", QuestionMarkCircleIcon],
+                  ["POLL", ChartBarIcon],
+                  ["WORD_CLOUD", ChatBubbleLeftRightIcon],
+                ] as const
+              ).map(([activityType, Icon]) => (
+                <button
+                  key={activityType}
+                  type="button"
+                  onClick={() => setType(activityType)}
+                  className="soft-card text-left hover:-translate-y-0.5"
+                >
+                  <Icon
+                    className="h-7 w-7 text-neutral-700"
+                    aria-hidden="true"
+                  />
+                  <strong className="mt-3 block text-lg text-[#1d1d1f]">
+                    {t(`activity.${activityType}.name`)}
+                  </strong>
+                  <span className="mt-1 block text-sm text-neutral-500">
+                    {t(`activity.${activityType}.description`)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <form
+              className="flex flex-col gap-3 sm:flex-row"
+              onSubmit={create}
+              noValidate
+            >
+              <label className="sr-only" htmlFor="quiz-title">
+                {t("activity.title", { type: t(`activity.${type}.name`) })}
+              </label>
+              <input
+                id="quiz-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("activity.title", {
+                  type: t(`activity.${type}.name`),
+                })}
+                aria-invalid={errorCode === "VALIDATION_ERROR"}
+                aria-describedby={
+                  errorCode === "VALIDATION_ERROR"
+                    ? "create-quiz-error"
+                    : undefined
+                }
+                className="form-input mt-0 flex-1"
+              />
+              <button type="submit" disabled={busy} className="btn-primary">
+                <PlusIcon className="h-5 w-5" aria-hidden="true" />
+                {busy ? t("common.loading") : t("common.create")}
               </button>
-            ))}
-          </div> : <form className="flex flex-col gap-3 sm:flex-row" onSubmit={create} noValidate>
-            <label className="sr-only" htmlFor="quiz-title">
-              {t("activity.title", { type: t(`activity.${type}.name`) })}
-            </label>
-            <input
-              id="quiz-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("activity.title", { type: t(`activity.${type}.name`) })}
-              aria-invalid={errorCode === "VALIDATION_ERROR"}
-              aria-describedby={errorCode === "VALIDATION_ERROR" ? "create-quiz-error" : undefined}
-              className="form-input mt-0 flex-1"
-            />
-            <button type="submit" disabled={busy} className="btn-primary">
-              <PlusIcon className="h-5 w-5" aria-hidden="true" />
-              {busy ? t("common.loading") : t("common.create")}
-            </button>
-            <button type="button" onClick={() => setType(undefined)} className="btn-secondary">{t("common.back")}</button>
-          </form>}
+              <button
+                type="button"
+                onClick={() => setType(undefined)}
+                className="btn-secondary"
+              >
+                {t("common.back")}
+              </button>
+            </form>
+          )}
           {errorCode && (
             <p id="create-quiz-error" role="alert" className="alert-error mt-4">
               {t(`errors.${errorCode}`)}
@@ -178,7 +217,10 @@ export default function TeacherClient({ token }: { token: string }) {
                   <ActivityTypeBadge type={quiz.type} />
                 </span>
                 {!quiz._count.questions && (
-                  <span id={`open-room-hint-${quiz.id}`} className="text-sm text-amber-800">
+                  <span
+                    id={`open-room-hint-${quiz.id}`}
+                    className="text-sm text-amber-800"
+                  >
                     {quiz.type === "WORD_CLOUD"
                       ? t("wordCloud.promptNotConfigured")
                       : t("quiz.addQuestionBeforeRoom")}
@@ -193,8 +235,14 @@ export default function TeacherClient({ token }: { token: string }) {
                     {t("common.edit")}
                   </a>
                   <button
-                    disabled={busy || Boolean(deletingId) || !quiz._count.questions}
-                    aria-describedby={!quiz._count.questions ? `open-room-hint-${quiz.id}` : undefined}
+                    disabled={
+                      busy || Boolean(deletingId) || !quiz._count.questions
+                    }
+                    aria-describedby={
+                      !quiz._count.questions
+                        ? `open-room-hint-${quiz.id}`
+                        : undefined
+                    }
                     onClick={() => start(quiz.id)}
                     className="btn-primary"
                   >
@@ -207,7 +255,10 @@ export default function TeacherClient({ token }: { token: string }) {
                     onClick={() => void duplicate(quiz.id)}
                     className="btn-secondary"
                   >
-                    <DocumentDuplicateIcon className="h-5 w-5" aria-hidden="true" />
+                    <DocumentDuplicateIcon
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    />
                     {t("common.duplicate")}
                   </button>
                   <button
@@ -237,7 +288,10 @@ export default function TeacherClient({ token }: { token: string }) {
             className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"
           >
             <div className="panel max-w-md">
-              <h2 id="delete-activity-title" className="text-xl font-bold text-slate-900">
+              <h2
+                id="delete-activity-title"
+                className="text-xl font-bold text-slate-900"
+              >
                 {t("teacher.deleteActivityTitle")}
               </h2>
               <p id="delete-activity-message" className="mt-2 text-slate-600">
@@ -259,7 +313,9 @@ export default function TeacherClient({ token }: { token: string }) {
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <TrashIcon className="h-5 w-5" aria-hidden="true" />
-                  {deletingId ? t("teacher.deletingActivity") : t("teacher.deleteActivity")}
+                  {deletingId
+                    ? t("teacher.deletingActivity")
+                    : t("teacher.deleteActivity")}
                 </button>
               </div>
             </div>

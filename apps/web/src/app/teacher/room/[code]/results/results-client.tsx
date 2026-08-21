@@ -11,7 +11,12 @@ import { BackButton } from "@/components/back-button";
 import { api, apiErrorCode, ApiError, type ApiErrorCode } from "@/lib/api";
 
 type Results = {
-  room: { code: string; quizTitle: string; phase: string; activityType: "QUIZ" | "POLL" | "WORD_CLOUD" };
+  room: {
+    code: string;
+    quizTitle: string;
+    phase: string;
+    activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
+  };
   summary: {
     totalParticipants: number;
     totalSubmittedAnswers: number;
@@ -197,7 +202,15 @@ export default function ResultsClient({
                 <p className="mt-2 text-sm">
                   {question.responseCount} {t("results.responses")} ·{" "}
                   {question.unansweredCount} {t("results.unanswered")}
-                  {results.room.activityType === "QUIZ" && <> · {question.correctCount} {t("results.correct")} · {question.incorrectCount} {t("results.incorrect")} · {t("results.correctPercentage")}: {question.correctPercentage}%</>}
+                  {results.room.activityType === "QUIZ" && (
+                    <>
+                      {" "}
+                      · {question.correctCount} {t("results.correct")} ·{" "}
+                      {question.incorrectCount} {t("results.incorrect")} ·{" "}
+                      {t("results.correctPercentage")}:{" "}
+                      {question.correctPercentage}%
+                    </>
+                  )}
                 </p>
                 <h4 className="mt-4 font-medium">
                   {t("results.answerDistribution")}
@@ -242,10 +255,16 @@ export default function ResultsClient({
                 <tr className="border-b">
                   <th>{t("results.rank")}</th>
                   <th>{t("results.participant")}</th>
-                  {results.room.activityType === "QUIZ" && <th>{t("results.score")}</th>}
+                  {results.room.activityType === "QUIZ" && (
+                    <th>{t("results.score")}</th>
+                  )}
                   <th>{t("results.answered")}</th>
-                  {results.room.activityType === "QUIZ" && <th>{t("results.correct")}</th>}
-                  {results.room.activityType === "QUIZ" && <th>{t("results.incorrect")}</th>}
+                  {results.room.activityType === "QUIZ" && (
+                    <th>{t("results.correct")}</th>
+                  )}
+                  {results.room.activityType === "QUIZ" && (
+                    <th>{t("results.incorrect")}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -256,10 +275,16 @@ export default function ResultsClient({
                   >
                     <td>{participant.rank}</td>
                     <td>{participant.name}</td>
-                    {results.room.activityType === "QUIZ" && <td>{participant.score}</td>}
+                    {results.room.activityType === "QUIZ" && (
+                      <td>{participant.score}</td>
+                    )}
                     <td>{participant.answeredCount}</td>
-                    {results.room.activityType === "QUIZ" && <td>{participant.correctCount}</td>}
-                    {results.room.activityType === "QUIZ" && <td>{participant.incorrectCount}</td>}
+                    {results.room.activityType === "QUIZ" && (
+                      <td>{participant.correctCount}</td>
+                    )}
+                    {results.room.activityType === "QUIZ" && (
+                      <td>{participant.incorrectCount}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -3,7 +3,9 @@
 :root {
   --background: #f5f5f7;
   --foreground: #1d1d1f;
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Arial, sans-serif;
 }
 html[lang="th"] {
   --font-ui:
@@ -18,7 +20,9 @@ html[lang="th"] {
 }
 
 @layer base {
-  body { @apply min-h-screen bg-[#f5f7fa] font-sans text-[#1d1d1f] antialiased; }
+  body {
+    @apply min-h-screen bg-[#f5f7fa] font-sans text-[#1d1d1f] antialiased;
+  }
   button,
   a,
   input {
@@ -33,10 +37,26 @@ html[lang="th"] {
   .page-shell {
     @apply relative isolate min-h-screen overflow-hidden bg-[#f5f7fa];
     background:
-      radial-gradient(circle at 12% 12%, rgba(125, 211, 252, 0.34), transparent 30%),
-      radial-gradient(circle at 88% 18%, rgba(94, 234, 212, 0.25), transparent 34%),
-      radial-gradient(circle at 52% 92%, rgba(253, 186, 116, 0.2), transparent 35%),
-      linear-gradient(135deg, rgba(255,255,255,0.32), rgba(223,243,255,0.35)),
+      radial-gradient(
+        circle at 12% 12%,
+        rgba(125, 211, 252, 0.34),
+        transparent 30%
+      ),
+      radial-gradient(
+        circle at 88% 18%,
+        rgba(94, 234, 212, 0.25),
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at 52% 92%,
+        rgba(253, 186, 116, 0.2),
+        transparent 35%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.32),
+        rgba(223, 243, 255, 0.35)
+      ),
       #f5f7fa;
   }
   .page-shell::before,
@@ -67,16 +87,40 @@ html[lang="th"] {
   }
   .page-shell-hero {
     background:
-      radial-gradient(circle at 16% 24%, rgba(56, 189, 248, 0.34), transparent 32%),
-      radial-gradient(circle at 84% 26%, rgba(45, 212, 191, 0.28), transparent 38%),
-      radial-gradient(circle at 54% 84%, rgba(251, 146, 60, 0.2), transparent 40%),
+      radial-gradient(
+        circle at 16% 24%,
+        rgba(56, 189, 248, 0.34),
+        transparent 32%
+      ),
+      radial-gradient(
+        circle at 84% 26%,
+        rgba(45, 212, 191, 0.28),
+        transparent 38%
+      ),
+      radial-gradient(
+        circle at 54% 84%,
+        rgba(251, 146, 60, 0.2),
+        transparent 40%
+      ),
       #f5f7fa;
   }
   .page-shell-join {
     background:
-      radial-gradient(circle at 14% 25%, rgba(56, 189, 248, 0.3), transparent 38%),
-      radial-gradient(circle at 85% 40%, rgba(20, 184, 166, 0.24), transparent 42%),
-      radial-gradient(circle at 55% 92%, rgba(251, 146, 60, 0.16), transparent 38%),
+      radial-gradient(
+        circle at 14% 25%,
+        rgba(56, 189, 248, 0.3),
+        transparent 38%
+      ),
+      radial-gradient(
+        circle at 85% 40%,
+        rgba(20, 184, 166, 0.24),
+        transparent 42%
+      ),
+      radial-gradient(
+        circle at 55% 92%,
+        rgba(251, 146, 60, 0.16),
+        transparent 38%
+      ),
       #f5f7fa;
   }
   .page-content {
@@ -109,16 +153,28 @@ html[lang="th"] {
 }
 
 @keyframes ambient-float-one {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(36px, 24px, 0) scale(1.06); }
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(36px, 24px, 0) scale(1.06);
+  }
 }
 
 @keyframes ambient-float-two {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-32px, -28px, 0) scale(0.95); }
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-32px, -28px, 0) scale(0.95);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .page-shell::before,
-  .page-shell::after { animation: none; }
+  .page-shell::after {
+    animation: none;
+  }
 }

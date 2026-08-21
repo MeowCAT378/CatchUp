@@ -42,15 +42,13 @@ const resources = {
 };
 
 if (!i18n.isInitialized)
-  i18n
-    .use(initReactI18next)
-    .init({
-      resources,
-      lng: "th",
-      fallbackLng: "th",
-      initAsync: false,
-      interpolation: { escapeValue: false },
-    });
+  i18n.use(initReactI18next).init({
+    resources,
+    lng: "th",
+    fallbackLng: "th",
+    initAsync: false,
+    interpolation: { escapeValue: false },
+  });
 else
   for (const [language, resource] of Object.entries(resources))
     i18n.addResourceBundle(

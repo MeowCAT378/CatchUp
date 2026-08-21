@@ -4,7 +4,11 @@ import { useTranslation } from "react-i18next";
 import { LanguageIcon } from "@heroicons/react/24/outline";
 import { usePathname } from "next/navigation";
 
-export function LanguageSwitcher({ hideOnTeacher = false }: { hideOnTeacher?: boolean }) {
+export function LanguageSwitcher({
+  hideOnTeacher = false,
+}: {
+  hideOnTeacher?: boolean;
+}) {
   const { i18n, t } = useTranslation();
   const pathname = usePathname();
   const setLanguage = (language: "th" | "en") => {

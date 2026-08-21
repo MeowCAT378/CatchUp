@@ -83,7 +83,9 @@ export default function JoinPage() {
               <input
                 name="displayName"
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value.slice(0, 40))}
+                onChange={(event) =>
+                  setDisplayName(event.target.value.slice(0, 40))
+                }
                 minLength={2}
                 maxLength={40}
                 autoComplete="name"

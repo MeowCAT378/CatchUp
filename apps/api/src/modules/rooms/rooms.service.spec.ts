@@ -170,10 +170,10 @@ describe('RoomsService state machine', () => {
     } as never);
     const state = await target.state('123456');
     expect(state.question).toMatchObject({
-      totalVotes: 4,
+      totalVotes: 6,
       entries: [
-        { id: 'a', votes: 3, rank: 1 },
-        { id: 'b', votes: 1, rank: 2 },
+        { id: 'a', votes: 4, rank: 1 },
+        { id: 'b', votes: 2, rank: 2 },
       ],
     });
   });
@@ -460,6 +460,7 @@ describe('RoomsService state machine', () => {
           },
         ]),
       },
+      wordCloudVote: { groupBy: jest.fn().mockResolvedValue([]) },
     } as never);
 
     await expect(target.dashboardState('123456')).resolves.toMatchObject({
@@ -494,17 +495,19 @@ describe('RoomsService state machine', () => {
       },
       wordCloudEntry: {
         create,
+        findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest
           .fn()
           .mockResolvedValue([
             { id: 'entry', text: 'CatchUp', _count: { votes: 2 }, votes: [] },
           ]),
       },
+      wordCloudVote: { findFirst: jest.fn().mockResolvedValue(null) },
     } as never);
     await expect(
       target.submitWord('123456', 'player', 'token', '  CatchUp  '),
     ).resolves.toEqual([
-      expect.objectContaining({ text: 'CatchUp', votes: 2, rank: 1 }),
+      expect.objectContaining({ text: 'CatchUp', votes: 3, rank: 1 }),
     ]);
     expect(create).toHaveBeenCalledWith({
       data: {
@@ -515,6 +518,46 @@ describe('RoomsService state machine', () => {
         normalizedText: 'catchup',
       },
     });
+  });
+  it('counts matching submissions as response frequency', async () => {
+    const create = jest.fn();
+    const target = new RoomsService({
+      room: { findUnique: jest.fn().mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD)) },
+      quizAttempt: { findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }) },
+      wordCloudEntry: {
+        create,
+        findFirst: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'entry' }),
+        findMany: jest.fn().mockResolvedValue([{ id: 'entry', text: 'CatchUp', _count: { votes: 1 }, votes: [] }]),
+      },
+      wordCloudVote: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
+    } as never);
+
+    await expect(target.submitWord('123456', 'player', 'token', 'CatchUp')).resolves.toEqual([
+      expect.objectContaining({ text: 'CatchUp', votes: 2 }),
+    ]);
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('moves a word-cloud vote and rejects voting for own entry', async () => {
+    const deleteMany = jest.fn();
+    const create = jest.fn();
+    const target = new RoomsService({
+      room: { findUnique: jest.fn().mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD)) },
+      quizAttempt: { findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }) },
+      wordCloudEntry: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'other', participantId: 'other-player' }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      $transaction: jest.fn((action) => action({ wordCloudVote: { deleteMany, create } })),
+    } as never);
+
+    await target.voteWord('123456', 'player', 'token', 'other');
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: { participantId: 'player', entry: { roomId: 'r1', questionId: 'q1' } },
+    });
+    expect(create).toHaveBeenCalledWith({ data: { entryId: 'other', participantId: 'player' } });
+
+    (target as unknown as { prisma: { wordCloudEntry: { findFirst: jest.Mock } } }).prisma.wordCloudEntry.findFirst.mockResolvedValueOnce({ id: 'own', participantId: 'player' });
+    await expect(target.voteWord('123456', 'player', 'token', 'own')).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
   it('rejects a second word-cloud response from one participant', async () => {
     const duplicate = new Prisma.PrismaClientKnownRequestError('Duplicate', {
@@ -536,6 +579,7 @@ describe('RoomsService state machine', () => {
         create: jest.fn().mockRejectedValue(duplicate),
         findFirst: jest.fn().mockResolvedValue({ id: 'existing' }),
       },
+      wordCloudVote: { create: jest.fn() },
     } as never);
 
     await expect(
@@ -556,6 +600,7 @@ describe('RoomsService state machine', () => {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockResolvedValue({ id: 'entry' }),
       },
+      wordCloudVote: { findFirst: jest.fn() },
     } as never);
 
     await expect(

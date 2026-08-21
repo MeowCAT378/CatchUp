@@ -112,10 +112,17 @@ export class RoomsService {
         : null;
     const wordSubmitted = Boolean(
       participantId && question && lifecycle.canSubmitWord
-        ? await this.prisma.wordCloudEntry.findFirst({
+        ? (await this.prisma.wordCloudEntry.findFirst({
             where: { roomId: room.id, questionId: question.id, participantId },
             select: { id: true },
-          })
+          })) ??
+          (await this.prisma.wordCloudVote.findFirst({
+            where: {
+              participantId,
+              entry: { roomId: room.id, questionId: question.id },
+            },
+            select: { id: true },
+          }))
         : null,
     );
     const revealsCorrectChoice =
@@ -324,6 +331,34 @@ export class RoomsService {
     const normalizedText = display.replace(/[A-Z]/g, (letter) =>
       letter.toLowerCase(),
     );
+    if (
+      (await this.prisma.wordCloudEntry.findFirst({
+        where: { roomId: room.id, questionId: question.id, participantId },
+        select: { id: true },
+      })) ??
+      (await this.prisma.wordCloudVote.findFirst({
+        where: {
+          participantId,
+          entry: { roomId: room.id, questionId: question.id },
+        },
+        select: { id: true },
+      }))
+    )
+      throw new AppError(
+        'WORD_ALREADY_SUBMITTED',
+        409,
+        'Word cloud response already submitted',
+      );
+    const existing = await this.prisma.wordCloudEntry.findFirst({
+      where: { roomId: room.id, questionId: question.id, normalizedText },
+      select: { id: true },
+    });
+    if (existing) {
+      await this.prisma.wordCloudVote.create({
+        data: { entryId: existing.id, participantId },
+      });
+      return this.wordCloudEntries(room.id, question.id, participantId);
+    }
     try {
       await this.prisma.wordCloudEntry.create({
         data: {
@@ -339,6 +374,16 @@ export class RoomsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        const existing = await this.prisma.wordCloudEntry.findFirst({
+          where: { roomId: room.id, questionId: question.id, normalizedText },
+          select: { id: true },
+        });
+        if (existing) {
+          await this.prisma.wordCloudVote.create({
+            data: { entryId: existing.id, participantId },
+          });
+          return this.wordCloudEntries(room.id, question.id, participantId);
+        }
         if (
           await this.prisma.wordCloudEntry.findFirst({
             where: { roomId: room.id, questionId: question.id, participantId },
@@ -382,29 +427,19 @@ export class RoomsService {
     await this.participantAttempt(room.id, participantId, participantToken);
     const entry = await this.prisma.wordCloudEntry.findFirst({
       where: { id: entryId, roomId: room.id, questionId: question.id },
+      select: { id: true, participantId: true },
     });
-    if (!entry)
-      throw new AppError(
-        'FORBIDDEN',
-        403,
-        'Entry does not belong to the active question',
-      );
-    try {
-      await this.prisma.wordCloudVote.create({
-        data: { entryId, participantId },
+    if (!entry || entry.participantId === participantId)
+      throw new AppError('FORBIDDEN', 403, 'Entry cannot be voted for');
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.wordCloudVote.deleteMany({
+        where: {
+          participantId,
+          entry: { roomId: room.id, questionId: question.id },
+        },
       });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      )
-        throw new AppError(
-          'ALREADY_VOTED',
-          409,
-          'Already voted for this entry',
-        );
-      throw error;
-    }
+      await prisma.wordCloudVote.create({ data: { entryId, participantId } });
+    });
     return this.wordCloudEntries(room.id, question.id, participantId);
   }
   async result(code: string, participantId?: string) {
@@ -573,11 +608,23 @@ export class RoomsService {
             },
           })
         : [];
+    const wordVoteResponders =
+      question && lifecycle.canSubmitWord
+        ? await this.prisma.wordCloudVote.groupBy({
+            by: ['participantId'],
+            where: {
+              entry: { roomId: room.id, questionId: question.id },
+            },
+          })
+        : [];
     const answered = new Set(
       lifecycle.canSubmitWord
-        ? wordResponders.flatMap(({ participantId }) =>
-            participantId ? [participantId] : [],
-          )
+        ? [
+            ...wordResponders.flatMap(({ participantId }) =>
+              participantId ? [participantId] : [],
+            ),
+            ...wordVoteResponders.map(({ participantId }) => participantId),
+          ]
         : answers.map((answer) => answer.attempt.participantId),
     );
     const entries =
@@ -649,8 +696,9 @@ export class RoomsService {
       .map((entry) => ({
         id: entry.id,
         text: entry.text,
-        votes: entry._count.votes,
+        votes: entry._count.votes + 1,
         voted: participantId ? entry.votes.length > 0 : false,
+        isOwn: entry.participantId === participantId,
       }))
       .sort((a, b) => b.votes - a.votes || a.text.localeCompare(b.text))
       .map((entry, index) => ({ ...entry, rank: index + 1 }));

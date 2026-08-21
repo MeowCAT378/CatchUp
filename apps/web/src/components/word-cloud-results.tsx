@@ -4,10 +4,9 @@ const colors = [
   "text-teal-700",
   "text-cyan-700",
   "text-sky-700",
-  "text-emerald-700",
   "text-blue-700",
-  "text-amber-700",
-  "text-orange-700",
+  "text-indigo-700",
+  "text-violet-700",
 ];
 
 export function wordCloudColor(text: string) {

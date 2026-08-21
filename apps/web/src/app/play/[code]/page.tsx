@@ -3,11 +3,11 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { ChartBarIcon, CheckIcon, HeartIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { clearParticipant, participantFor, participantHeaders } from "@/lib/participant";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
-import { WordCloudResults, wordCloudFontSize } from "@/components/word-cloud-results";
+import { WordCloudResults } from "@/components/word-cloud-results";
 
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Connection = "connected" | "reconnecting" | "disconnected";
@@ -23,7 +23,7 @@ type State = {
     position: number;
     total: number;
     choices: { id: string; text: string }[];
-    entries: { id: string; text: string; votes: number; voted: boolean; rank: number }[];
+    entries: { id: string; text: string; votes: number; voted: boolean; isOwn: boolean; rank: number }[];
     totalVotes: number;
   };
   answerSubmitted: boolean;
@@ -213,7 +213,7 @@ export default function Play({ params }: { params: Promise<{ code: string }> }) 
       });
       liveSocket.on(RoomEvents.state, (next: State) => {
         activeQuestionId = next.question?.id ?? null;
-        setState((current) => mergeParticipantState(current, next));
+        setState((current) => mergePrivateState(current, next));
         if (next.wordSubmitted) setWord("");
         setErrorCode("");
         setConnection("connected");
@@ -289,9 +289,6 @@ export default function Play({ params }: { params: Promise<{ code: string }> }) 
   };
 
   const entries = state?.question?.entries ?? [];
-  const entryVotes = entries.map((entry) => entry.votes);
-  const minVotes = entryVotes.length ? Math.min(...entryVotes) : 0;
-  const maxVotes = entryVotes.length ? Math.max(...entryVotes) : 0;
   const connected = connection === "connected";
   const pollResult =
     state?.activityType === "POLL" &&
@@ -371,19 +368,22 @@ export default function Play({ params }: { params: Promise<{ code: string }> }) 
             )}
             {state.phase === "ACTIVE" && state.activityType === "WORD_CLOUD" && (
               <div className="mt-7">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <label htmlFor="word-cloud-response" className="sr-only">{t("wordCloud.addResponse")}</label>
-                  <input id="word-cloud-response" value={word} maxLength={30} disabled={state.wordSubmitted || submitting || !connected} onChange={(event) => setWord(event.target.value)} className="form-input mt-0 min-w-0 flex-1" placeholder={t("wordCloud.addResponse")} aria-describedby="word-cloud-response-hint" />
-                  <button type="button" disabled={state.wordSubmitted || !word.trim() || submitting || !connected} onClick={() => wordAction(RoomEvents.wordCloudSubmit, { text: word.trim() })} className="btn-primary">{t("wordCloud.addResponse")}</button>
-                </div>
-                <p id="word-cloud-response-hint" className="mt-2 flex justify-between gap-3 text-sm text-slate-600"><span>{t("wordCloud.responseHint")}</span><span>{word.length}/30</span></p>
+                {!state.wordSubmitted && <>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <label htmlFor="word-cloud-response" className="sr-only">{t("wordCloud.addResponse")}</label>
+                    <input id="word-cloud-response" value={word} maxLength={30} disabled={submitting || !connected} onChange={(event) => setWord(event.target.value)} className="form-input mt-0 min-w-0 flex-1" placeholder={t("wordCloud.addResponse")} aria-describedby="word-cloud-response-hint" />
+                    <button type="button" disabled={!word.trim() || submitting || !connected} onClick={() => wordAction(RoomEvents.wordCloudSubmit, { text: word.trim() })} className="btn-primary">{t("wordCloud.addResponse")}</button>
+                  </div>
+                  <p id="word-cloud-response-hint" className="mt-2 flex justify-between gap-3 text-sm text-slate-600"><span>{t("wordCloud.responseHint")}</span><span>{word.length}/30</span></p>
+                </>}
                 <div className="mt-5 flex flex-wrap gap-3">
-                  {entries.map((entry) => {
-                    const size = wordCloudFontSize(entry.votes, minVotes, maxVotes);
-                    return <button key={entry.id} type="button" aria-pressed={entry.voted} disabled={entry.voted || submitting || !connected} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} style={{ fontSize: `clamp(18px, ${size / 10}vw, ${size}px)` }} className="min-h-11 max-w-full break-words rounded-2xl bg-neutral-100 px-4 py-3 font-semibold text-[#1d1d1f] disabled:opacity-60">{entry.text} <HeartIcon className="inline h-5 w-5" aria-hidden="true" /> {entry.votes}{entry.voted && <span className="ml-2 text-sm">{t("wordCloud.voted")}</span>}</button>;
-                  })}
+                  {entries.map((entry) => entry.isOwn ? (
+                    <span key={entry.id} className="inline-flex min-h-11 max-w-full items-center rounded-2xl border border-cyan-100 bg-white/70 px-4 py-2.5 text-lg font-bold text-slate-900 shadow-sm backdrop-blur-sm"><span className="break-words">{entry.text}</span></span>
+                  ) : (
+                    <button key={entry.id} type="button" aria-pressed={entry.voted} disabled={submitting || !connected} onClick={() => wordAction(RoomEvents.wordCloudVote, { entryId: entry.id })} className={`min-h-11 max-w-full rounded-2xl border px-4 py-2.5 text-left text-lg font-bold shadow-sm transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60 ${entry.voted ? "border-red-300 bg-red-50 text-red-900" : "border-cyan-100 bg-white/70 text-slate-900 hover:border-red-200 hover:bg-red-50/60"}`}><span className="break-words">{entry.text}</span></button>
+                  ))}
                 </div>
-                {state.wordSubmitted && <p role="status" className="mt-5 rounded-2xl bg-emerald-50 p-4 font-semibold text-emerald-900"><CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />{t("wordCloud.responseAdded")}</p>}
+                {state.wordSubmitted && <p role="status" className="mt-5 rounded-2xl bg-teal-50/80 px-4 py-3 text-sm font-medium text-teal-800"><CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />{t("wordCloud.responseAdded")}</p>}
               </div>
             )}
             {state.activityType !== "WORD_CLOUD" && state.phase === "ACTIVE" && state.answerSubmitted && <p role="status" className="mt-5 rounded-2xl bg-neutral-100 p-4 font-semibold text-[#1d1d1f]"><CheckIcon className="mr-1 inline h-5 w-5" aria-hidden="true" />{t("player.answerRecorded")}</p>}

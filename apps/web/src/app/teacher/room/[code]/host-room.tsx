@@ -18,6 +18,7 @@ import {
   WordCloudResults,
   wordCloudFontSize,
 } from "@/components/word-cloud-results";
+import { Skeleton, SkeletonText } from "@/components/skeleton";
 
 type Dashboard = {
   state: {
@@ -112,6 +113,34 @@ export default function HostRoom({
     setPending(event);
     socket.current?.emit(event, { code });
   };
+  if (!data && !errorCode)
+    return (
+      <main className="page-shell">
+        <div className="page-content" aria-busy="true">
+          <BackButton href="/teacher" />
+          <header className="mt-6 grid gap-6 rounded-3xl bg-[#1d1d1f] p-6 md:grid-cols-[1fr_auto] md:p-9">
+            <div>
+              <SkeletonText className="w-1/4 bg-white/20" />
+              <Skeleton className="mt-4 h-16 w-2/3 bg-white/20" />
+              <SkeletonText className="mt-5 w-1/2 bg-white/20" />
+            </div>
+            <Skeleton className="h-56 w-56 bg-white/80 lg:h-72 lg:w-72" />
+          </header>
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="panel">
+              <SkeletonText className="w-3/4" />
+              <SkeletonText className="mt-5" />
+              <Skeleton className="mt-6 h-11 w-28 rounded-full" />
+            </div>
+            <div className="panel">
+              <SkeletonText className="w-1/3" />
+              <SkeletonText className="mt-5" />
+              <SkeletonText className="mt-3 w-4/5" />
+            </div>
+          </section>
+        </div>
+      </main>
+    );
   return (
     <main className="page-shell">
       <div className="page-content">
@@ -153,9 +182,7 @@ export default function HostRoom({
                 className="mx-auto h-48 w-48 lg:h-64 lg:w-64"
               />
             ) : (
-              <p className="grid h-48 place-items-center">
-                {t("common.loading")}
-              </p>
+              <Skeleton className="mx-auto h-48 w-48 bg-slate-200 lg:h-64 lg:w-64" />
             )}
             <p className="mt-2 text-center font-bold">
               {t("room.qrJoin")}: {code}

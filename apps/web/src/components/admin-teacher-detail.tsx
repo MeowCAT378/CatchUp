@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
+import { SkeletonActivityCard, SkeletonText } from "@/components/skeleton";
 
 type Teacher = {
   id: string;
@@ -106,7 +107,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
   if (!teacher && !error)
     return (
       <main className="page-shell">
-        <p className="page-content">{t("common.loading")}</p>
+        <div className="page-content max-w-6xl" aria-busy="true"><SkeletonText className="w-1/2" /><div className="panel mt-6"><SkeletonText className="w-1/3" /><SkeletonText className="mt-6" /><SkeletonText className="mt-4" /></div><div className="mt-7 grid gap-4"><SkeletonActivityCard /><SkeletonActivityCard /></div></div>
       </main>
     );
   if (!teacher)

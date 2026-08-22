@@ -15,6 +15,7 @@ import {
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { Logo } from "@/components/logo";
+import { SkeletonActivityCard } from "@/components/skeleton";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Quiz = {
   id: string;
@@ -25,7 +26,7 @@ type Quiz = {
 export default function TeacherClient({ token }: { token: string }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>();
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ActivityType>();
   const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
@@ -109,7 +110,7 @@ export default function TeacherClient({ token }: { token: string }) {
     setErrorCode("");
     try {
       await api(`/quizzes/${confirming.id}`, { method: "DELETE" }, token);
-      setQuizzes((items) => items.filter((quiz) => quiz.id !== confirming.id));
+      setQuizzes((items) => items?.filter((quiz) => quiz.id !== confirming.id) ?? []);
       setConfirming(undefined);
     } catch (error) {
       setErrorCode(apiErrorCode(error));
@@ -201,7 +202,9 @@ export default function TeacherClient({ token }: { token: string }) {
           )}
         </section>
         <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-          {quizzes.length ? (
+          {!quizzes ? (
+            <><SkeletonActivityCard /><SkeletonActivityCard /></>
+          ) : quizzes.length ? (
             quizzes.map((quiz) => (
               <li
                 key={quiz.id}

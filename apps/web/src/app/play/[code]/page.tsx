@@ -12,6 +12,7 @@ import {
 } from "@/lib/participant";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
 import { WordCloudResults } from "@/components/word-cloud-results";
+import { Skeleton, SkeletonResults, SkeletonText } from "@/components/skeleton";
 
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Connection = "connected" | "reconnecting" | "disconnected";
@@ -337,11 +338,14 @@ export default function Play({
         </div>
 
         {loading && !state && (
-          <section
-            role="status"
-            className="panel mt-8 text-center text-lg font-semibold text-slate-600"
-          >
-            {t("player.loadingRoom")}
+          <section className="panel mt-8" aria-busy="true">
+            <SkeletonText className="w-1/4" />
+            <Skeleton className="mt-5 h-12 w-4/5" />
+            <div className="mt-7 grid gap-3">
+              {Array.from({ length: 4 }, (_, index) => (
+                <Skeleton key={index} className="h-20 w-full" />
+              ))}
+            </div>
           </section>
         )}
         {bootstrapFailed && !state && (
@@ -423,9 +427,13 @@ export default function Play({
                   ))}
                 </div>
               </>
+            ) : resultLoading ? (
+              <div aria-busy="true">
+                <Skeleton className="mt-5 h-40 w-full" />
+              </div>
             ) : (
               <p role="status" className="mt-5 text-center text-slate-600">
-                {resultLoading ? t("common.loading") : t("results.noQuestions")}
+                {t("results.noQuestions")}
               </p>
             )}
           </section>
@@ -598,9 +606,9 @@ export default function Play({
           state.activityType === "QUIZ" &&
           resultLoading &&
           !result && (
-            <p role="status" className="panel mt-8 text-center">
-              {t("common.loading")}
-            </p>
+            <div aria-busy="true">
+              <SkeletonResults />
+            </div>
           )}
         {result && state?.activityType === "QUIZ" && (
           <section className="panel mt-8">

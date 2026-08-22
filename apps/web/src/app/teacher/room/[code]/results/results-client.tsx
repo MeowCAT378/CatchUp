@@ -8,6 +8,7 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
+import { SkeletonResults } from "@/components/skeleton";
 import {
   api,
   apiErrorCode,
@@ -157,7 +158,7 @@ export default function ResultsClient({
       <main className="page-shell">
         <div className="page-content">
           <BackButton href={backHref ?? `/teacher/room/${code}`} />
-          <p className="mt-4">{t("results.loading")}</p>
+          <div aria-busy="true"><SkeletonResults /></div>
         </div>
       </main>
     );

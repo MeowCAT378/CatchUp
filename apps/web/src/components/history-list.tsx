@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
+import { SkeletonTable } from "@/components/skeleton";
 
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Session = {
@@ -192,8 +193,8 @@ export function HistoryList({
             {t(`errors.${errorCode}`)}
           </p>
         )}
-        {loading ? (
-          <p className="panel mt-6">{t("common.loading")}</p>
+        {loading && !result ? (
+          <div aria-busy="true"><SkeletonTable columns={admin ? 7 : 6} /></div>
         ) : result?.items.length ? (
           <div className="panel mt-6 overflow-x-auto">
             <table className="min-w-full text-left">

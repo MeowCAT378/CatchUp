@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
+import { SkeletonStatCard } from "@/components/skeleton";
 
 type Overview = {
   totalTeachers: number;
@@ -43,12 +44,9 @@ export function AdminOverview() {
             {t(`errors.${error}`)}
           </p>
         )}
-        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map(([label, value]) => (
-            <div key={label} className="panel">
-              <p className="text-sm text-slate-500">{t(label)}</p>
-              <p className="mt-2 text-4xl font-bold">{value ?? "—"}</p>
-            </div>
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy={!data}>
+          {!data && !error ? Array.from({ length: 6 }, (_, index) => <SkeletonStatCard key={index} />) : data && cards.map(([label, value]) => (
+            <div key={label} className="panel"><p className="text-sm text-slate-500">{t(label)}</p><p className="mt-2 text-4xl font-bold">{value}</p></div>
           ))}
         </div>
         <div className="mt-7 flex gap-3">

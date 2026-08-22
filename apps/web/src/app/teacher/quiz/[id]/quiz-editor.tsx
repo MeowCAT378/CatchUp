@@ -11,6 +11,7 @@ import {
 import { BackButton } from "@/components/back-button";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
+import { SkeletonText } from "@/components/skeleton";
 
 type Quiz = {
   title: string;
@@ -325,7 +326,7 @@ export default function QuizEditor({
               {t(`errors.${errorCode}`)}
             </p>
           ) : (
-            <p className="mt-6">{t("common.loading")}</p>
+            <div className="panel mt-6" aria-busy="true"><SkeletonText className="w-1/2" /><SkeletonText className="mt-5" /><SkeletonText className="mt-3 w-4/5" /></div>
           )
         ) : (
           <ol className="mt-6 grid gap-4">

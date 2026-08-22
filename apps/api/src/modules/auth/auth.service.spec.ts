@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { AuthService, normalizeEmail } from './auth.service';
+import * as bcrypt from 'bcrypt';
 
 describe('normalizeEmail', () => {
   it('trims and lowercases emails without changing passwords', () => {
@@ -23,5 +24,29 @@ describe('normalizeEmail', () => {
         password: 'password123',
       }),
     ).rejects.toMatchObject({ code: 'EMAIL_IN_USE', status: 409 });
+  });
+
+  it('rejects valid credentials for a disabled account', async () => {
+    const passwordHash = await bcrypt.hash('password123', 4);
+    const service = new AuthService(
+      {
+        user: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'teacher',
+            email: 'teacher@example.test',
+            passwordHash,
+            role: 'HOST',
+            isDisabled: true,
+          }),
+        },
+      } as never,
+      {} as never,
+    );
+    await expect(
+      service.login({
+        email: 'teacher@example.test',
+        password: 'password123',
+      }),
+    ).rejects.toMatchObject({ code: 'ACCOUNT_DISABLED', status: 403 });
   });
 });

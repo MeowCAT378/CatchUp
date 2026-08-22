@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { UserIcon } from "@heroicons/react/24/outline";
@@ -23,7 +23,10 @@ export default function LoginPage() {
         redirect: false,
       });
       if (result?.error) setError(t("auth.invalidCredentials"));
-      else router.replace("/teacher");
+      else {
+        const session = await getSession();
+        router.replace(session?.user.role === "ADMIN" ? "/admin" : "/teacher");
+      }
     } catch {
       setError(t("errors.REQUEST_FAILED"));
     } finally {

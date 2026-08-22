@@ -1,4 +1,4 @@
-import { ActivityType, RoomPhase, RoomStatus } from '@prisma/client';
+import { ActivityType, Role, RoomPhase, RoomStatus } from '@prisma/client';
 import { RoomResultsService } from './room-results.service';
 const room = {
   id: 'r1',
@@ -6,6 +6,12 @@ const room = {
   hostId: 'host',
   status: RoomStatus.ACTIVE,
   phase: RoomPhase.ACTIVE,
+  activityTitle: 'ไทย Quiz',
+  activityType: ActivityType.QUIZ,
+  createdAt: new Date('2026-08-22T00:00:00Z'),
+  startedAt: new Date('2026-08-22T00:01:00Z'),
+  endedAt: null,
+  host: { id: 'host', name: 'Teacher', email: 'teacher@example.test' },
   quiz: {
     title: 'ไทย Quiz',
     type: ActivityType.QUIZ,
@@ -22,17 +28,43 @@ const room = {
   },
   attempts: [
     {
+      participantId: 'a',
       score: 1000,
       participant: { displayName: 'A' },
-      answers: [{ questionId: 'q1', choiceId: 'c1', isCorrect: true }],
+      answers: [
+        {
+          questionId: 'q1',
+          choiceId: 'c1',
+          isCorrect: true,
+          choice: { text: 'Correct' },
+          question: { text: 'Question' },
+          submittedAt: new Date('2026-08-22T00:02:00Z'),
+        },
+      ],
     },
     {
+      participantId: 'b',
       score: 1000,
       participant: { displayName: 'B' },
-      answers: [{ questionId: 'q1', choiceId: 'c2', isCorrect: false }],
+      answers: [
+        {
+          questionId: 'q1',
+          choiceId: 'c2',
+          isCorrect: false,
+          choice: { text: 'Wrong' },
+          question: { text: 'Question' },
+          submittedAt: new Date('2026-08-22T00:02:00Z'),
+        },
+      ],
     },
-    { score: 0, participant: { displayName: 'C' }, answers: [] },
+    {
+      participantId: 'c',
+      score: 0,
+      participant: { displayName: 'C' },
+      answers: [],
+    },
   ],
+  wordCloudEntries: [],
 };
 describe('RoomResultsService', () => {
   it('calculates summary, competition ranks, and hides correct answers before reveal', async () => {
@@ -74,5 +106,21 @@ describe('RoomResultsService', () => {
     );
     expect(results.questions[0].correctChoiceId).toBe('c1');
     expect(results.questions[0].distribution[0].isCorrect).toBe(true);
+  });
+
+  it('rejects another teacher but allows an admin to inspect history', async () => {
+    const service = new RoomResultsService({
+      room: { findUnique: jest.fn().mockResolvedValue(room) },
+    } as never);
+    await expect(
+      service.results('ROOM1', 'other-teacher'),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      service.results('ROOM1', {
+        sub: 'admin',
+        email: 'admin@example.test',
+        role: Role.ADMIN,
+      }),
+    ).resolves.toMatchObject({ room: { id: 'r1' } });
   });
 });

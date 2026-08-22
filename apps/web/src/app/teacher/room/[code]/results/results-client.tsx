@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDownTrayIcon,
@@ -8,7 +8,13 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
-import { api, apiErrorCode, ApiError, type ApiErrorCode } from "@/lib/api";
+import {
+  api,
+  apiErrorCode,
+  ApiError,
+  secureApi,
+  type ApiErrorCode,
+} from "@/lib/api";
 
 type Results = {
   room: {
@@ -16,6 +22,12 @@ type Results = {
     quizTitle: string;
     phase: string;
     activityType: "QUIZ" | "POLL" | "WORD_CLOUD";
+    id: string;
+    status: string;
+    createdAt: string;
+    startedAt: string | null;
+    endedAt: string | null;
+    teacher: { id: string; name: string | null; email: string };
   };
   summary: {
     totalParticipants: number;
@@ -39,6 +51,7 @@ type Results = {
       count: number;
       isCorrect?: boolean;
     }[];
+    words: { text: string; submissionCount: number; voteCount: number }[];
   }[];
   participants: {
     name: string;
@@ -48,40 +61,63 @@ type Results = {
     correctCount: number;
     incorrectCount: number;
   }[];
+  responses: {
+    participant: string;
+    question: string;
+    selectedAnswer: string;
+    correctAnswer: string;
+    correct: boolean | null;
+    scoreAwarded: number;
+    submittedAt: string;
+  }[];
 };
 
 export default function ResultsClient({
   token,
   code,
+  sessionId,
+  backHref,
 }: {
-  token: string;
-  code: string;
+  token?: string;
+  code?: string;
+  sessionId?: string;
+  backHref?: string;
 }) {
   const { t } = useTranslation();
   const [results, setResults] = useState<Results>();
   const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
   const [downloading, setDownloading] = useState("");
+  const path = sessionId
+    ? `/rooms/history/${sessionId}`
+    : `/rooms/${code}/results`;
+  const getResults = useCallback(
+    () =>
+      sessionId ? secureApi<Results>(path) : api<Results>(path, {}, token),
+    [path, sessionId, token],
+  );
   const load = async () => {
     setErrorCode("");
     try {
-      setResults(await api<Results>(`/rooms/${code}/results`, {}, token));
+      setResults(await getResults());
     } catch (error) {
       setErrorCode(apiErrorCode(error));
     }
   };
   useEffect(() => {
-    api<Results>(`/rooms/${code}/results`, {}, token)
+    getResults()
       .then(setResults)
       .catch((error) => setErrorCode(apiErrorCode(error)));
-  }, [code, token]);
+  }, [getResults]);
   async function download(format: "csv" | "xlsx") {
     if (downloading) return;
     setDownloading(format);
     setErrorCode("");
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms/${code}/results/export.${format}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        sessionId
+          ? `/api/catchup/rooms/history/${sessionId}/export.${format}`
+          : `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms/${code}/results/export.${format}`,
+        sessionId ? {} : { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!response.ok) {
         const body = await response.json().catch(() => undefined);
@@ -90,7 +126,9 @@ export default function ResultsClient({
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
-      link.download = `catchup-${code}-results.${format}`;
+      link.download = sessionId
+        ? `catchup-session-${sessionId}.${format}`
+        : `catchup-${code}-results.${format}`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -103,7 +141,7 @@ export default function ResultsClient({
     return (
       <main className="page-shell">
         <div className="page-content">
-          <BackButton href={`/teacher/room/${code}`} />
+          <BackButton href={backHref ?? `/teacher/room/${code}`} />
           <p role="alert" className="alert-error mt-4">
             {t(`errors.${errorCode}`)}
           </p>
@@ -118,7 +156,7 @@ export default function ResultsClient({
     return (
       <main className="page-shell">
         <div className="page-content">
-          <BackButton href={`/teacher/room/${code}`} />
+          <BackButton href={backHref ?? `/teacher/room/${code}`} />
           <p className="mt-4">{t("results.loading")}</p>
         </div>
       </main>
@@ -140,7 +178,7 @@ export default function ResultsClient({
   return (
     <main className="page-shell">
       <div className="page-content max-w-6xl">
-        <BackButton href={`/teacher/room/${code}`} />
+        <BackButton href={backHref ?? `/teacher/room/${code}`} />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-bold">
             <ChartBarIcon
@@ -185,6 +223,34 @@ export default function ResultsClient({
             </div>
           ))}
         </div>
+        {sessionId && (
+          <dl className="panel mt-6 grid gap-4 sm:grid-cols-3">
+            <div>
+              <dt className="text-sm text-slate-500">{t("history.teacher")}</dt>
+              <dd className="font-semibold">
+                {results.room.teacher.name ?? results.room.teacher.email}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-slate-500">
+                {t("history.startedAt")}
+              </dt>
+              <dd>
+                {results.room.startedAt
+                  ? new Date(results.room.startedAt).toLocaleString()
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-slate-500">{t("history.endedAt")}</dt>
+              <dd>
+                {results.room.endedAt
+                  ? new Date(results.room.endedAt).toLocaleString()
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+        )}
         <section className="panel mt-8">
           <h2 className="text-xl font-bold">
             {t("results.questionAnalytics")}
@@ -213,31 +279,50 @@ export default function ResultsClient({
                   )}
                 </p>
                 <h4 className="mt-4 font-medium">
-                  {t("results.answerDistribution")}
+                  {t(
+                    results.room.activityType === "WORD_CLOUD"
+                      ? "history.words"
+                      : "results.answerDistribution",
+                  )}
                 </h4>
                 <div className="mt-2 grid gap-2">
-                  {question.distribution.map((choice) => (
-                    <div key={choice.choiceId}>
-                      <div className="flex justify-between text-sm">
-                        <span
-                          className={
-                            choice.isCorrect ? "font-bold text-emerald-700" : ""
-                          }
-                        >
-                          {choice.text}
-                        </span>
-                        <span>{choice.count}</span>
-                      </div>
-                      <div className="h-2 rounded bg-slate-100">
+                  {results.room.activityType === "WORD_CLOUD"
+                    ? question.words.map((word) => (
                         <div
-                          className="h-2 rounded bg-teal-500"
-                          style={{
-                            width: `${question.responseCount ? (choice.count / question.responseCount) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                          key={word.text}
+                          className="flex justify-between rounded-xl bg-slate-50 px-3 py-2"
+                        >
+                          <span>{word.text}</span>
+                          <span>
+                            {word.submissionCount} {t("history.submissions")} ·{" "}
+                            {word.voteCount} {t("history.votes")}
+                          </span>
+                        </div>
+                      ))
+                    : question.distribution.map((choice) => (
+                        <div key={choice.choiceId}>
+                          <div className="flex justify-between text-sm">
+                            <span
+                              className={
+                                choice.isCorrect
+                                  ? "font-bold text-emerald-700"
+                                  : ""
+                              }
+                            >
+                              {choice.text}
+                            </span>
+                            <span>{choice.count}</span>
+                          </div>
+                          <div className="h-2 rounded bg-slate-100">
+                            <div
+                              className="h-2 rounded bg-teal-500"
+                              style={{
+                                width: `${question.responseCount ? (choice.count / question.responseCount) * 100 : 0}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                 </div>
               </article>
             ))
@@ -245,6 +330,42 @@ export default function ResultsClient({
             <p className="mt-3 text-slate-500">{t("results.noQuestions")}</p>
           )}
         </section>
+        {results.responses.length > 0 && (
+          <section className="panel mt-8 overflow-x-auto">
+            <h2 className="text-xl font-bold">{t("history.responses")}</h2>
+            <table className="mt-3 min-w-full text-left">
+              <thead>
+                <tr className="border-b">
+                  <th>{t("results.participant")}</th>
+                  <th>{t("results.questionNumber", { number: "" })}</th>
+                  <th>{t("results.answered")}</th>
+                  {results.room.activityType === "QUIZ" && (
+                    <th>{t("results.correct")}</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {results.responses.map((response, index) => (
+                  <tr
+                    key={`${response.participant}-${index}`}
+                    className="border-b"
+                  >
+                    <td>{response.participant}</td>
+                    <td>{response.question}</td>
+                    <td>{response.selectedAnswer}</td>
+                    {results.room.activityType === "QUIZ" && (
+                      <td>
+                        {response.correct
+                          ? t("results.correct")
+                          : t("results.incorrect")}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
         <section className="panel mt-8 overflow-x-auto">
           <h2 className="text-xl font-bold">
             {t("results.participantResults")}

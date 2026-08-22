@@ -22,15 +22,11 @@ import {
   UpdateQuizDto,
 } from './dto';
 import { QuizzesService } from './quizzes.service';
-import { RoomsGateway } from '../rooms/rooms.gateway';
 @Controller('quizzes')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.HOST, Role.ADMIN)
+@Roles(Role.HOST)
 export class QuizzesController {
-  constructor(
-    private readonly quizzes: QuizzesService,
-    private readonly roomsGateway: RoomsGateway,
-  ) {}
+  constructor(private readonly quizzes: QuizzesService) {}
   @Get() list(@CurrentUser() u: AuthUser) {
     return this.quizzes.list(u.sub);
   }
@@ -47,13 +43,8 @@ export class QuizzesController {
   ) {
     return this.quizzes.update(id, u.sub, dto);
   }
-  @Delete(':id') async remove(
-    @CurrentUser() u: AuthUser,
-    @Param('id') id: string,
-  ) {
-    const deleted = await this.quizzes.remove(id, u.sub);
-    this.roomsGateway.activityDeleted(deleted.rooms);
-    return { id: deleted.id };
+  @Delete(':id') remove(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.quizzes.remove(id, u.sub);
   }
   @Post(':id/duplicate') duplicate(
     @CurrentUser() u: AuthUser,

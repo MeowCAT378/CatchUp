@@ -5,6 +5,7 @@ import {
   Headers,
   Param,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -22,7 +23,9 @@ import {
   SubmitWordDto,
   VoteWordDto,
 } from './dto';
+import { HistoryQueryDto } from './history.dto';
 import { RoomExportService } from './room-export.service';
+import { RoomHistoryService } from './room-history.service';
 import { RoomResultsService } from './room-results.service';
 import { RoomsService } from './rooms.service';
 @Controller('rooms')
@@ -31,15 +34,58 @@ export class RoomsController {
     private readonly rooms: RoomsService,
     private readonly results: RoomResultsService,
     private readonly exports: RoomExportService,
+    private readonly history: RoomHistoryService,
   ) {}
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.HOST, Role.ADMIN)
+  @Roles(Role.HOST)
   create(@CurrentUser() u: AuthUser, @Body() dto: CreateRoomDto) {
     return this.rooms.create(dto.quizId, u.sub);
   }
   @Post('join') join(@Body() dto: JoinRoomDto) {
     return this.rooms.join(dto.code, dto.displayName);
+  }
+  @Get('history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.HOST, Role.ADMIN)
+  historyList(@CurrentUser() user: AuthUser, @Query() query: HistoryQueryDto) {
+    return this.history.list(user, query);
+  }
+  @Get('history/:id/export.csv')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.HOST, Role.ADMIN)
+  async exportHistoryCsv(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Res() response: Response,
+  ) {
+    response
+      .type('text/csv; charset=utf-8')
+      .attachment(
+        `catchup-session-${id}-${new Date().toISOString().slice(0, 10)}.csv`,
+      )
+      .send(await this.exports.csvById(id, user));
+  }
+  @Get('history/:id/export.xlsx')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.HOST, Role.ADMIN)
+  async exportHistoryXlsx(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Res() response: Response,
+  ) {
+    response
+      .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .attachment(
+        `catchup-session-${id}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      )
+      .send(await this.exports.xlsxById(id, user));
+  }
+  @Get('history/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.HOST, Role.ADMIN)
+  historyDetail(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.results.resultsById(id, user);
   }
   @Get(':code/results/export.csv') @UseGuards(JwtAuthGuard) async exportCsv(
     @Param('code') code: string,
@@ -49,7 +95,7 @@ export class RoomsController {
     response
       .type('text/csv; charset=utf-8')
       .attachment(`catchup-${code}-results.csv`)
-      .send(await this.exports.csv(code, u.sub));
+      .send(await this.exports.csv(code, u));
   }
   @Get(':code/results/export.xlsx') @UseGuards(JwtAuthGuard) async exportXlsx(
     @Param('code') code: string,
@@ -59,13 +105,13 @@ export class RoomsController {
     response
       .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       .attachment(`catchup-${code}-results.xlsx`)
-      .send(await this.exports.xlsx(code, u.sub));
+      .send(await this.exports.xlsx(code, u));
   }
   @Get(':code/results') @UseGuards(JwtAuthGuard) resultsForHost(
     @Param('code') code: string,
     @CurrentUser() u: AuthUser,
   ) {
-    return this.results.results(code, u.sub);
+    return this.results.results(code, u);
   }
   @Get(':code/dashboard') @UseGuards(JwtAuthGuard) dashboard(
     @Param('code') code: string,

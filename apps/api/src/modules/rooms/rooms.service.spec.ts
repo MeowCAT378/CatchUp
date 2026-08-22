@@ -123,6 +123,19 @@ describe('RoomsService state machine', () => {
       ),
     ).rejects.toMatchObject({ status: 403 });
   });
+  it('rejects privileged socket reconnect for a disabled host', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE)),
+      },
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as never);
+    await expect(
+      target.socketAccess('123456', undefined, undefined, 'host'),
+    ).rejects.toMatchObject({ status: 403 });
+  });
   it('retries a colliding generated code', async () => {
     const codes: string[] = [];
     const duplicate = new Prisma.PrismaClientKnownRequestError('Duplicate', {
@@ -522,17 +535,37 @@ describe('RoomsService state machine', () => {
   it('counts matching submissions as response frequency', async () => {
     const create = jest.fn();
     const target = new RoomsService({
-      room: { findUnique: jest.fn().mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD)) },
-      quizAttempt: { findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }) },
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+          ),
+      },
+      quizAttempt: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
+      },
       wordCloudEntry: {
         create,
-        findFirst: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'entry' }),
-        findMany: jest.fn().mockResolvedValue([{ id: 'entry', text: 'CatchUp', _count: { votes: 1 }, votes: [] }]),
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ id: 'entry' }),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'entry', text: 'CatchUp', _count: { votes: 1 }, votes: [] },
+          ]),
       },
-      wordCloudVote: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
+      wordCloudVote: {
+        create: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
     } as never);
 
-    await expect(target.submitWord('123456', 'player', 'token', 'CatchUp')).resolves.toEqual([
+    await expect(
+      target.submitWord('123456', 'player', 'token', 'CatchUp'),
+    ).resolves.toEqual([
       expect.objectContaining({ text: 'CatchUp', votes: 2 }),
     ]);
     expect(create).not.toHaveBeenCalled();
@@ -541,23 +574,49 @@ describe('RoomsService state machine', () => {
     const deleteMany = jest.fn();
     const create = jest.fn();
     const target = new RoomsService({
-      room: { findUnique: jest.fn().mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD)) },
-      quizAttempt: { findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }) },
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+          ),
+      },
+      quizAttempt: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'attempt' }),
+      },
       wordCloudEntry: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'other', participantId: 'other-player' }),
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'other', participantId: 'other-player' }),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      $transaction: jest.fn((action) => action({ wordCloudVote: { deleteMany, create } })),
+      $transaction: jest.fn((action) =>
+        action({ wordCloudVote: { deleteMany, create } }),
+      ),
     } as never);
 
     await target.voteWord('123456', 'player', 'token', 'other');
     expect(deleteMany).toHaveBeenCalledWith({
-      where: { participantId: 'player', entry: { roomId: 'r1', questionId: 'q1' } },
+      where: {
+        participantId: 'player',
+        entry: { roomId: 'r1', questionId: 'q1' },
+      },
     });
-    expect(create).toHaveBeenCalledWith({ data: { entryId: 'other', participantId: 'player' } });
+    expect(create).toHaveBeenCalledWith({
+      data: { entryId: 'other', participantId: 'player' },
+    });
 
-    (target as unknown as { prisma: { wordCloudEntry: { findFirst: jest.Mock } } }).prisma.wordCloudEntry.findFirst.mockResolvedValueOnce({ id: 'own', participantId: 'player' });
-    await expect(target.voteWord('123456', 'player', 'token', 'own')).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    (
+      target as unknown as {
+        prisma: { wordCloudEntry: { findFirst: jest.Mock } };
+      }
+    ).prisma.wordCloudEntry.findFirst.mockResolvedValueOnce({
+      id: 'own',
+      participantId: 'player',
+    });
+    await expect(
+      target.voteWord('123456', 'player', 'token', 'own'),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
   it('rejects a second word-cloud response from one participant', async () => {
     const duplicate = new Prisma.PrismaClientKnownRequestError('Duplicate', {

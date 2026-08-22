@@ -28,11 +28,15 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     jwt: ({ token, user }) => {
-      if (user) token.accessToken = user.accessToken;
+      if (user) {
+        token.accessToken = user.accessToken;
+        token.role = user.role;
+      }
       return token;
     },
     session: ({ session, token }) => {
       session.accessToken = token.accessToken ?? "";
+      session.user.role = token.role ?? "";
       return session;
     },
   },

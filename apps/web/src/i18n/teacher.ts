@@ -15,7 +15,7 @@ export const teacher = {
         "Related data for this question will also be deleted and this action cannot be undone.",
       deleteActivityTitle: "Delete this activity?",
       deleteActivityWarning:
-        "The activity, questions, rooms, results, and related data will be deleted. This action cannot be undone.",
+        "The activity will be removed from your dashboard. Existing session history and results will be preserved.",
       deleteActivity: "Delete activity",
       deletingActivity: "Deleting…",
     },
@@ -25,7 +25,7 @@ export const teacher = {
 Object.assign(teacher.th.teacher, {
   deleteActivityTitle: "ลบกิจกรรมนี้หรือไม่?",
   deleteActivityWarning:
-    "กิจกรรม คำถาม ห้อง ผลลัพธ์ และข้อมูลที่เกี่ยวข้องจะถูกลบ และไม่สามารถย้อนกลับได้",
+    "กิจกรรมจะถูกนำออกจากแดชบอร์ด แต่ประวัติเซสชันและผลลัพธ์เดิมจะยังคงอยู่",
   deleteActivity: "ลบกิจกรรม",
   deletingActivity: "กำลังลบ…",
 });

@@ -2,6 +2,7 @@
 
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { Logo } from "@/components/logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -19,6 +20,9 @@ export function TeacherHeader() {
           <Logo className="h-12 w-auto sm:h-14" />
         </a>
         <div className="flex items-center gap-2">
+          <Link href="/teacher/history" className="btn-secondary px-4">
+            {t("history.title")}
+          </Link>
           <LanguageSwitcher />
           <button
             type="button"

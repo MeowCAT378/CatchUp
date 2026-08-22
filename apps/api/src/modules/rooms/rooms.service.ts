@@ -1,6 +1,12 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
-import { ActivityType, Prisma, RoomPhase, RoomStatus } from '@prisma/client';
+import {
+  ActivityType,
+  Prisma,
+  Role,
+  RoomPhase,
+  RoomStatus,
+} from '@prisma/client';
 import { AppError } from '../../common/app-error';
 import { PrismaService } from '../../prisma/prisma.service';
 import { competitionRanks } from './ranking';
@@ -19,7 +25,7 @@ export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
   async create(quizId: string, hostId: string) {
     const quiz = await this.prisma.quiz.findFirst({
-      where: { id: quizId, ownerId: hostId },
+      where: { id: quizId, ownerId: hostId, deletedAt: null },
       include: { _count: { select: { questions: true } } },
     });
     if (!quiz) throw new AppError('QUIZ_NOT_FOUND', 404, 'Quiz not found');
@@ -30,7 +36,13 @@ export class RoomsService {
     for (let i = 0; i < 5; i++) {
       try {
         return await this.prisma.room.create({
-          data: { quizId, hostId, code: this.code() },
+          data: {
+            quizId,
+            hostId,
+            code: this.code(),
+            activityTitle: quiz.title,
+            activityType: quiz.type,
+          },
         });
       } catch (e) {
         if (
@@ -112,17 +124,17 @@ export class RoomsService {
         : null;
     const wordSubmitted = Boolean(
       participantId && question && lifecycle.canSubmitWord
-        ? (await this.prisma.wordCloudEntry.findFirst({
+        ? ((await this.prisma.wordCloudEntry.findFirst({
             where: { roomId: room.id, questionId: question.id, participantId },
             select: { id: true },
           })) ??
-          (await this.prisma.wordCloudVote.findFirst({
-            where: {
-              participantId,
-              entry: { roomId: room.id, questionId: question.id },
-            },
-            select: { id: true },
-          }))
+            (await this.prisma.wordCloudVote.findFirst({
+              where: {
+                participantId,
+                entry: { roomId: room.id, questionId: question.id },
+              },
+              select: { id: true },
+            })))
         : null,
     );
     const revealsCorrectChoice =
@@ -170,6 +182,7 @@ export class RoomsService {
         status: RoomStatus.ACTIVE,
         phase: RoomPhase.ACTIVE,
         currentQuestionIndex: 0,
+        startedAt: new Date(),
       },
     });
   }
@@ -215,7 +228,11 @@ export class RoomsService {
       where: { id: room.id },
       data:
         next >= room.quiz.questions.length
-          ? { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED }
+          ? {
+              status: RoomStatus.FINISHED,
+              phase: RoomPhase.COMPLETED,
+              endedAt: new Date(),
+            }
           : { currentQuestionIndex: next, phase: RoomPhase.ACTIVE },
     });
   }
@@ -225,7 +242,11 @@ export class RoomsService {
       throw new AppError('INVALID_ROOM_PHASE', 409, 'Room cannot be completed');
     return this.prisma.room.update({
       where: { id: room.id },
-      data: { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED },
+      data: {
+        status: RoomStatus.FINISHED,
+        phase: RoomPhase.COMPLETED,
+        endedAt: new Date(),
+      },
     });
   }
   async submit(
@@ -554,8 +575,18 @@ export class RoomsService {
     userId?: string,
   ) {
     const room = await this.room(code);
-    if (userId === room.hostId)
+    if (userId === room.hostId) {
+      const host = await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          isDisabled: false,
+          role: { in: [Role.HOST, Role.ADMIN] },
+        },
+        select: { id: true },
+      });
+      if (!host) throw new ForbiddenException('Host access is disabled');
       return { code: room.code, roomId: room.id, role: 'host' as const };
+    }
     if (!participantId || !participantToken)
       throw new ForbiddenException('Join the room first');
     const participant = await this.prisma.participant.findFirst({

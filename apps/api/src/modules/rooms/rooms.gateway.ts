@@ -9,7 +9,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
+import type { Namespace, Socket } from 'socket.io';
 import { RoomsService } from './rooms.service';
 import { RoomEvents } from './room-events';
 import type {
@@ -40,7 +40,7 @@ export const socketCorsOrigin = (
   cors: { origin: socketCorsOrigin },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server!: Server;
+  @WebSocketServer() server!: Namespace;
   private readonly presence = new Map<string, Set<string>>();
   constructor(
     private readonly rooms: RoomsService,
@@ -267,6 +267,11 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (key.startsWith(`${room.id}:`)) this.presence.delete(key);
     }
   }
+  disconnectHost(userId: string) {
+    for (const socket of this.server.sockets.values())
+      if ((socket.data as SocketData).userId === userId)
+        socket.disconnect(true);
+  }
   private async host(
     client: Socket,
     code: string,
@@ -276,6 +281,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const data = client.data as SocketData;
       if (data.role !== 'host' || data.code !== code)
         throw new ForbiddenException();
+      await this.rooms.socketAccess(code, undefined, undefined, data.userId);
       await action();
       await this.dashboard(code);
     } catch (error) {

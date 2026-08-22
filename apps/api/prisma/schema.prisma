@@ -34,7 +34,11 @@ model User {
   passwordHash String
   name String?
   role Role @default(HOST)
+  isDisabled Boolean @default(false)
   quizzes Quiz[] @relation("QuizOwner")
+  hostedRooms Room[] @relation("RoomHost")
+  adminAuditLogs AdminAuditLog[] @relation("AuditAdmin")
+  targetedAuditLogs AdminAuditLog[] @relation("AuditTarget")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -47,9 +51,10 @@ model Quiz {
   owner User @relation("QuizOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   questions Question[]
   rooms Room[]
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@index([ownerId])
+  @@index([ownerId, deletedAt])
 }
 model Question {
   id String @id @default(cuid())
@@ -76,14 +81,22 @@ model Room {
   quizId String
   quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
   hostId String
+  host User @relation("RoomHost", fields: [hostId], references: [id], onDelete: Restrict)
+  activityTitle String
+  activityType ActivityType
   status RoomStatus @default(LOBBY)
   phase RoomPhase @default(WAITING)
   currentQuestionIndex Int @default(0)
   participants Participant[]
   attempts QuizAttempt[]
   wordCloudEntries WordCloudEntry[]
+  startedAt DateTime?
+  endedAt DateTime?
   createdAt DateTime @default(now())
-  @@index([hostId])
+  updatedAt DateTime @default(now()) @updatedAt
+  @@index([hostId, status, createdAt])
+  @@index([activityType, startedAt])
+  @@index([status, endedAt])
 }
 model Participant {
   id String @id @default(cuid())
@@ -148,4 +161,16 @@ model WordCloudVote {
   createdAt DateTime @default(now())
   @@unique([participantId, entryId])
   @@index([entryId])
+}
+
+model AdminAuditLog {
+  id String @id @default(cuid())
+  adminId String
+  admin User @relation("AuditAdmin", fields: [adminId], references: [id], onDelete: Restrict)
+  targetUserId String
+  targetUser User @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  action String
+  createdAt DateTime @default(now())
+  @@index([adminId, createdAt])
+  @@index([targetUserId, createdAt])
 }

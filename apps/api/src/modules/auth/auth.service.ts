@@ -39,6 +39,8 @@ export class AuthService {
     });
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash)))
       throw new UnauthorizedException('Invalid email or password');
+    if (user.isDisabled)
+      throw new AppError('ACCOUNT_DISABLED', 403, 'Account is disabled');
     return this.token(user);
   }
   private token(user: {

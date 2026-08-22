@@ -54,6 +54,7 @@ async function main() {
         name: account.name,
         passwordHash,
         role: account.role,
+        isDisabled: false,
       },
       create: {
         id: userId,
@@ -61,6 +62,7 @@ async function main() {
         name: account.name,
         passwordHash,
         role: account.role,
+        isDisabled: false,
       },
     });
 
@@ -115,18 +117,24 @@ async function main() {
         code: `MOCK${suffix}`,
         quizId,
         hostId: userId,
+        activityTitle: `Mock Quiz ${suffix}`,
+        activityType: 'QUIZ',
         status: RoomStatus.ACTIVE,
         phase: RoomPhase.REVEALED,
         currentQuestionIndex: 0,
+        startedAt: new Date(`2026-08-0${suffix}T02:00:00.000Z`),
       },
       create: {
         id: roomId,
         code: `MOCK${suffix}`,
         quizId,
         hostId: userId,
+        activityTitle: `Mock Quiz ${suffix}`,
+        activityType: 'QUIZ',
         status: RoomStatus.ACTIVE,
         phase: RoomPhase.REVEALED,
         currentQuestionIndex: 0,
+        startedAt: new Date(`2026-08-0${suffix}T02:00:00.000Z`),
       },
     });
 

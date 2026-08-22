@@ -126,6 +126,9 @@ html[lang="th"] {
   .page-content {
     @apply relative z-10 mx-auto w-full max-w-7xl px-5 pb-10 pt-24 sm:px-8 sm:pb-14 sm:pt-28 lg:px-10;
   }
+  .admin-shell .page-content {
+    @apply pt-40 sm:pt-28;
+  }
   .panel {
     @apply rounded-3xl border border-white/70 bg-white/55 p-5 shadow-[0_20px_60px_rgba(39,92,115,0.12)] backdrop-blur-2xl sm:p-7;
   }

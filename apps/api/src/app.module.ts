@@ -7,6 +7,7 @@ import { QuizzesModule } from './modules/quizzes/quizzes.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { ApiExceptionFilter } from './common/api-exception.filter';
 import { ApiResponseInterceptor } from './common/api-response.interceptor';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ApiResponseInterceptor } from './common/api-response.interceptor';
     AuthModule,
     QuizzesModule,
     RoomsModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ApiResponseInterceptor },

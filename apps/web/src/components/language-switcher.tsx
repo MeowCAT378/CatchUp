@@ -15,7 +15,11 @@ export function LanguageSwitcher({
     localStorage.setItem("catchup:language", language);
     void i18n.changeLanguage(language);
   };
-  if (hideOnTeacher && pathname.startsWith("/teacher")) return null;
+  if (
+    hideOnTeacher &&
+    (pathname.startsWith("/teacher") || pathname.startsWith("/admin"))
+  )
+    return null;
   return (
     <div
       role="group"

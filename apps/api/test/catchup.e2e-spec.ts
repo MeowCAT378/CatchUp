@@ -1,6 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Role, RoomPhase, RoomStatus } from '@prisma/client';
+import { ActivityType, Role, RoomPhase, RoomStatus } from '@prisma/client';
 import { io, Socket } from 'socket.io-client';
 import request from 'supertest';
 import * as ExcelJS from 'exceljs';
@@ -451,9 +451,9 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       .expect(200);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(xlsx.body);
-    expect(
-      workbook.getWorksheet('Participants')?.getColumn(2).values,
-    ).toContain("'=นักเรียนไทย");
+    expect(workbook.getWorksheet('Leaderboard')?.getColumn(2).values).toContain(
+      "'=นักเรียนไทย",
+    );
   }, 30_000);
 
   it('deletes unused questions but preserves questions used by rooms', async () => {
@@ -510,9 +510,18 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       questionId: string,
       choiceId: string,
       code: string,
+      activityTitle: string,
+      activityType: ActivityType,
     ) => {
       const room = await prisma.room.create({
-        data: { quizId, hostId: owner.id, code, status: 'ACTIVE' },
+        data: {
+          quizId,
+          hostId: owner.id,
+          code,
+          activityTitle,
+          activityType,
+          status: 'ACTIVE',
+        },
       });
       const participant = await prisma.participant.create({
         data: { roomId: room.id, displayName: `Player ${code}` },
@@ -542,6 +551,8 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       quiz.questions[0].id,
       quiz.questions[0].choices[0].id,
       '900001',
+      quiz.title,
+      quiz.type,
     );
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${quiz.questions[0].id}`)
@@ -564,6 +575,8 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       poll.questions[0].id,
       poll.questions[0].choices[0].id,
       '900002',
+      poll.title,
+      poll.type,
     );
     await request(app.getHttpServer())
       .delete(`/quizzes/questions/${poll.questions[0].id}`)
@@ -582,7 +595,13 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
 
     const wordCloud = await createActivity('WORD_CLOUD', 'word cloud');
     const wordRoom = await prisma.room.create({
-      data: { quizId: wordCloud.id, hostId: owner.id, code: '900003' },
+      data: {
+        quizId: wordCloud.id,
+        hostId: owner.id,
+        code: '900003',
+        activityTitle: wordCloud.title,
+        activityType: wordCloud.type,
+      },
     });
     const wordParticipant = await prisma.participant.create({
       data: { roomId: wordRoom.id, displayName: 'Word player' },
@@ -630,10 +649,11 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       .expect(404);
   });
 
-  it('deletes owned activities and all persisted room data', async () => {
+  it('soft-deletes owned activities and preserves persisted room data', async () => {
     const owner = await prisma.user.findUniqueOrThrow({
       where: { email: 'e2e+host@example.test' },
     });
+    let roomSequence = 0;
     const createActivity = async (type: 'QUIZ' | 'POLL' | 'WORD_CLOUD') => {
       const activity = await prisma.quiz.create({
         data: {
@@ -662,7 +682,9 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
         data: {
           quizId: activity.id,
           hostId: owner.id,
-          code: `8${type.length}000${type === 'QUIZ' ? 1 : type === 'POLL' ? 2 : 3}`,
+          code: `8${String(++roomSequence).padStart(5, '0')}`,
+          activityTitle: activity.title,
+          activityType: type,
           ...(type === 'WORD_CLOUD'
             ? { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED }
             : {}),
@@ -705,41 +727,42 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
         .delete(`/quizzes/${created.activity.id}`)
         .set('Authorization', `Bearer ${hostToken}`)
         .expect(200);
-      await expect(
-        prisma.quiz.findUnique({ where: { id: created.activity.id } }),
-      ).resolves.toBeNull();
+      const deletedActivity = await prisma.quiz.findUnique({
+        where: { id: created.activity.id },
+      });
+      expect(deletedActivity?.deletedAt).toBeInstanceOf(Date);
       await expect(
         prisma.room.findUnique({ where: { id: created.room.id } }),
-      ).resolves.toBeNull();
+      ).resolves.toMatchObject({ id: created.room.id });
       await expect(
         prisma.participant.findUnique({
           where: { id: created.participant.id },
         }),
-      ).resolves.toBeNull();
+      ).resolves.toMatchObject({ id: created.participant.id });
       await expect(
         prisma.quizAttempt.findUnique({ where: { id: created.attempt.id } }),
-      ).resolves.toBeNull();
+      ).resolves.toMatchObject({ id: created.attempt.id });
       expect(
         await prisma.question.count({ where: { quizId: created.activity.id } }),
-      ).toBe(0);
+      ).toBe(1);
       expect(
         await prisma.choice.count({
           where: { questionId: created.activity.questions[0].id },
         }),
-      ).toBe(0);
+      ).toBe(type === 'WORD_CLOUD' ? 0 : 2);
       expect(
         await prisma.answer.count({ where: { attemptId: created.attempt.id } }),
-      ).toBe(0);
+      ).toBe(type === 'WORD_CLOUD' ? 0 : 1);
       expect(
         await prisma.wordCloudEntry.count({
           where: { roomId: created.room.id },
         }),
-      ).toBe(0);
+      ).toBe(type === 'WORD_CLOUD' ? 1 : 0);
       expect(
         await prisma.wordCloudVote.count({
           where: { participantId: created.participant.id },
         }),
-      ).toBe(0);
+      ).toBe(type === 'WORD_CLOUD' ? 1 : 0);
     }
     const otherToken = body<{ accessToken: string }>(
       await request(app.getHttpServer()).post('/auth/register').send({

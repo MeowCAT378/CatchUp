@@ -60,7 +60,7 @@ export default function JoinPage() {
         <BackButton href="/" />
         <div className="panel mt-4 w-full">
           <Logo className="mx-auto h-28 w-auto sm:h-32" />
-          <h1 className="mt-4 text-3xl font-black text-slate-900">
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
             {t("player.joinRoom")}
           </h1>
           <form action={submit} className="mt-7 grid gap-4">
@@ -97,7 +97,7 @@ export default function JoinPage() {
             <p id="display-name-hint" className="-mt-2 text-sm text-slate-600">
               {t("player.joinHint")}
             </p>
-            <button disabled={loading} className="btn-primary">
+            <button type="submit" disabled={loading} className="btn-primary">
               <UsersIcon className="h-5 w-5" aria-hidden="true" />
               {loading ? t("common.loading") : t("room.join")}
               <ArrowRightIcon className="h-5 w-5" aria-hidden="true" />

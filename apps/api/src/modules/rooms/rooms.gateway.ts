@@ -9,15 +9,15 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
+import type { Namespace, Socket } from 'socket.io';
+import { AppError } from '../../common/app-error';
 import { RoomsService } from './rooms.service';
 import { RoomEvents } from './room-events';
-import type {
-  AnswerSubmitPayload,
-  RoomJoinPayload,
-  WordCloudSubmitPayload,
-  WordCloudVotePayload,
-} from './room-events';
+import { checkRateLimit } from '../../common/rate-limit';
+import {
+  parseTrustProxyHops,
+  trustedClientAddress,
+} from '../../common/network/trusted-client-address';
 type SocketData = {
   userId?: string;
   code?: string;
@@ -25,6 +25,18 @@ type SocketData = {
   participantToken?: string;
   role?: 'host' | 'participant';
 };
+const roomCode = /^\d{6}$/;
+const stringPayload = (
+  value: unknown,
+  fields: readonly string[],
+): value is Record<string, string> =>
+  typeof value === 'object' &&
+  value !== null &&
+  fields.every(
+    (field) => typeof (value as Record<string, unknown>)[field] === 'string',
+  );
+const invalidPayload = () =>
+  new AppError('VALIDATION_ERROR', 400, 'Invalid Socket event payload');
 
 export const socketCorsOrigin = (
   origin: string | undefined,
@@ -40,8 +52,11 @@ export const socketCorsOrigin = (
   cors: { origin: socketCorsOrigin },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server!: Server;
+  @WebSocketServer() server!: Namespace;
   private readonly presence = new Map<string, Set<string>>();
+  private readonly trustedProxyHops = parseTrustProxyHops(
+    process.env.TRUST_PROXY_HOPS,
+  );
   constructor(
     private readonly rooms: RoomsService,
     private readonly jwt: JwtService,
@@ -62,10 +77,21 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   @SubscribeMessage(RoomEvents.join) async join(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: RoomJoinPayload,
+    @MessageBody() payload: unknown,
   ) {
     try {
+      const raw = payload as Record<string, unknown>;
+      if (
+        !stringPayload(payload, ['code']) ||
+        !roomCode.test(payload.code) ||
+        (raw.participantId !== undefined &&
+          typeof raw.participantId !== 'string') ||
+        (raw.participantToken !== undefined &&
+          typeof raw.participantToken !== 'string')
+      )
+        throw invalidPayload();
       await this.leave(client);
+      checkRateLimit(`socket-join:${this.clientAddress(client)}`, 300, 60_000);
       const access = await this.rooms.socketAccess(
         payload.code,
         payload.participantId,
@@ -116,33 +142,39 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   @SubscribeMessage(RoomEvents.quizStart) async start(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { code: string },
+    @MessageBody() body: unknown,
   ) {
-    await this.host(client, body.code, async () => {
-      await this.rooms.start(body.code, (client.data as SocketData).userId!);
-      const state = await this.rooms.state(body.code);
-      this.server.to(this.group(body.code)).emit(RoomEvents.quizStarted, state);
-      this.server
-        .to(this.group(body.code))
-        .emit(RoomEvents.questionStarted, state);
+    await this.host(client, body, async (code) => {
+      await this.rooms.start(code, (client.data as SocketData).userId!);
+      const state = await this.rooms.state(code);
+      this.server.to(this.group(code)).emit(RoomEvents.quizStarted, state);
+      this.server.to(this.group(code)).emit(RoomEvents.questionStarted, state);
     });
   }
   @SubscribeMessage(RoomEvents.questionStart) async questionStart(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { code: string },
+    @MessageBody() body: unknown,
   ) {
-    await this.host(client, body.code, async () => {
-      const state = await this.rooms.state(body.code);
-      this.server
-        .to(this.group(body.code))
-        .emit(RoomEvents.questionStarted, state);
+    await this.host(client, body, async (code) => {
+      const state = await this.rooms.state(code);
+      this.server.to(this.group(code)).emit(RoomEvents.questionStarted, state);
     });
   }
   @SubscribeMessage(RoomEvents.answerSubmit) async answer(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: AnswerSubmitPayload,
+    @MessageBody() body: unknown,
   ) {
     try {
+      if (
+        !stringPayload(body, [
+          'code',
+          'participantId',
+          'participantToken',
+          'choiceId',
+        ]) ||
+        !roomCode.test(body.code)
+      )
+        throw invalidPayload();
       const data = client.data as SocketData;
       if (
         data.role !== 'participant' ||
@@ -151,6 +183,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.participantToken !== body.participantToken
       )
         throw new ForbiddenException();
+      checkRateLimit(
+        `socket-action-address:${this.clientAddress(client)}`,
+        600,
+        10_000,
+      );
+      checkRateLimit(`socket-participant:${data.participantId}`, 30, 10_000);
       await this.rooms.submit(
         body.code,
         body.participantId,
@@ -172,111 +210,104 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   @SubscribeMessage(RoomEvents.wordCloudSubmit) async wordCloudSubmit(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: WordCloudSubmitPayload,
+    @MessageBody() body: unknown,
   ) {
-    await this.wordCloud(client, body, () =>
+    await this.wordCloud(client, body, 'text', (payload) =>
       this.rooms.submitWord(
-        body.code,
-        body.participantId,
-        body.participantToken,
-        body.text,
+        payload.code,
+        payload.participantId,
+        payload.participantToken,
+        payload.text,
       ),
     );
   }
   @SubscribeMessage(RoomEvents.wordCloudVote) async wordCloudVote(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: WordCloudVotePayload,
+    @MessageBody() body: unknown,
   ) {
-    await this.wordCloud(client, body, () =>
+    await this.wordCloud(client, body, 'entryId', (payload) =>
       this.rooms.voteWord(
-        body.code,
-        body.participantId,
-        body.participantToken,
-        body.entryId,
+        payload.code,
+        payload.participantId,
+        payload.participantToken,
+        payload.entryId,
       ),
     );
   }
   @SubscribeMessage(RoomEvents.questionReveal) async reveal(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { code: string },
+    @MessageBody() body: unknown,
   ) {
-    await this.host(client, body.code, async () => {
+    await this.host(client, body, async (code) => {
       const revealed = await this.rooms.reveal(
-        body.code,
+        code,
         (client.data as SocketData).userId!,
       );
-      this.server.to(this.group(body.code)).emit(RoomEvents.questionRevealed, {
-        ...(await this.rooms.state(body.code)),
+      this.server.to(this.group(code)).emit(RoomEvents.questionRevealed, {
+        ...(await this.rooms.state(code)),
         correctChoiceId: revealed.correctChoiceId,
       });
       this.server
-        .to(this.group(body.code))
-        .emit(
-          RoomEvents.leaderboardUpdated,
-          await this.rooms.result(body.code),
-        );
+        .to(this.group(code))
+        .emit(RoomEvents.leaderboardUpdated, await this.rooms.result(code));
     });
   }
   @SubscribeMessage(RoomEvents.questionNext) async next(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { code: string },
+    @MessageBody() body: unknown,
   ) {
-    await this.host(client, body.code, async () => {
+    await this.host(client, body, async (code) => {
       const room = await this.rooms.next(
-        body.code,
+        code,
         (client.data as SocketData).userId!,
       );
       if (room.status === 'FINISHED') {
         this.server
-          .to(this.group(body.code))
-          .emit(RoomEvents.state, await this.rooms.state(body.code));
+          .to(this.group(code))
+          .emit(RoomEvents.state, await this.rooms.state(code));
         this.server
-          .to(this.group(body.code))
-          .emit(RoomEvents.quizCompleted, await this.rooms.result(body.code));
+          .to(this.group(code))
+          .emit(RoomEvents.quizCompleted, await this.rooms.result(code));
       } else
         this.server
-          .to(this.group(body.code))
-          .emit(RoomEvents.questionStarted, await this.rooms.state(body.code));
+          .to(this.group(code))
+          .emit(RoomEvents.questionStarted, await this.rooms.state(code));
     });
   }
   @SubscribeMessage(RoomEvents.quizComplete) async complete(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { code: string },
+    @MessageBody() body: unknown,
   ) {
-    await this.host(client, body.code, async () => {
-      await this.rooms.complete(body.code, (client.data as SocketData).userId!);
+    await this.host(client, body, async (code) => {
+      await this.rooms.complete(code, (client.data as SocketData).userId!);
       this.server
-        .to(this.group(body.code))
-        .emit(RoomEvents.state, await this.rooms.state(body.code));
+        .to(this.group(code))
+        .emit(RoomEvents.state, await this.rooms.state(code));
       this.server
-        .to(this.group(body.code))
-        .emit(RoomEvents.quizCompleted, await this.rooms.result(body.code));
-      await this.dashboard(body.code);
+        .to(this.group(code))
+        .emit(RoomEvents.quizCompleted, await this.rooms.result(code));
     });
   }
-  activityDeleted(rooms: { id: string; code: string }[]) {
-    for (const room of rooms) {
-      this.server
-        .to(this.group(room.code))
-        .emit(RoomEvents.error, { code: 'ROOM_NOT_FOUND' });
-      this.server.in(this.group(room.code)).socketsLeave(this.group(room.code));
-      this.server
-        .in(this.hostGroup(room.code))
-        .socketsLeave(this.hostGroup(room.code));
-      for (const key of this.presence.keys())
-        if (key.startsWith(`${room.id}:`)) this.presence.delete(key);
-    }
+  disconnectHost(userId: string) {
+    for (const socket of this.server.sockets.values())
+      if ((socket.data as SocketData).userId === userId)
+        socket.disconnect(true);
   }
   private async host(
     client: Socket,
-    code: string,
-    action: () => Promise<void>,
+    body: unknown,
+    action: (code: string) => Promise<void>,
   ) {
     try {
+      if (!stringPayload(body, ['code']) || !roomCode.test(body.code))
+        throw invalidPayload();
+      const code = body.code;
       const data = client.data as SocketData;
       if (data.role !== 'host' || data.code !== code)
         throw new ForbiddenException();
-      await action();
+      checkRateLimit(`socket-host:${data.userId}:${code}`, 20, 10_000);
+      await this.rooms.socketAccess(code, undefined, undefined, data.userId);
+      await action(code);
       await this.dashboard(code);
     } catch (error) {
       this.error(client, error);
@@ -284,10 +315,21 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   private async wordCloud(
     client: Socket,
-    body: WordCloudSubmitPayload | WordCloudVotePayload,
-    action: () => Promise<unknown>,
+    body: unknown,
+    valueField: 'text' | 'entryId',
+    action: (payload: Record<string, string>) => Promise<unknown>,
   ) {
     try {
+      if (
+        !stringPayload(body, [
+          'code',
+          'participantId',
+          'participantToken',
+          valueField,
+        ]) ||
+        !roomCode.test(body.code)
+      )
+        throw invalidPayload();
       const data = client.data as SocketData;
       if (
         data.role !== 'participant' ||
@@ -296,7 +338,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.participantToken !== body.participantToken
       )
         throw new ForbiddenException();
-      await action();
+      checkRateLimit(
+        `socket-action-address:${this.clientAddress(client)}`,
+        600,
+        10_000,
+      );
+      checkRateLimit(`socket-participant:${data.participantId}`, 30, 10_000);
+      await action(body);
       client.emit(
         RoomEvents.state,
         await this.rooms.state(
@@ -356,11 +404,20 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private hostGroup(code: string) {
     return `room:${code}:hosts`;
   }
+  private clientAddress(client: Socket) {
+    return trustedClientAddress(
+      client.handshake.address,
+      client.handshake.headers?.['x-forwarded-for'],
+      this.trustedProxyHops,
+    );
+  }
   private error(client: Socket, error: unknown) {
     const code =
-      error instanceof Error && 'code' in error
-        ? (error as { code: string }).code
-        : 'REQUEST_FAILED';
+      error instanceof AppError
+        ? error.code
+        : error instanceof ForbiddenException
+          ? 'FORBIDDEN'
+          : 'REQUEST_FAILED';
     client.emit(RoomEvents.error, { code });
   }
 }

@@ -6,6 +6,8 @@ export type ApiErrorCode =
   | "PARTICIPANT_NOT_FOUND"
   | "QUESTION_NOT_FOUND"
   | "EMAIL_IN_USE"
+  | "ACCOUNT_DISABLED"
+  | "TEACHER_NOT_FOUND"
   | "DISPLAY_NAME_IN_USE"
   | "DUPLICATE_ENTRY"
   | "ALREADY_VOTED"
@@ -18,6 +20,7 @@ export type ApiErrorCode =
   | "QUESTION_HAS_RESPONSES"
   | "ACTIVITY_IN_USE"
   | "DELETE_FAILED"
+  | "RATE_LIMITED"
   | "FORBIDDEN"
   | "VALIDATION_ERROR"
   | "UNAUTHORIZED"
@@ -38,8 +41,8 @@ export type ApiEnvelope<T> = {
   data: T;
   error?: { code?: ApiErrorCode; message: string | string[] };
 };
-export async function api<T>(
-  path: string,
+async function request<T>(
+  url: string,
   init: RequestInit = {},
   token?: string,
 ): Promise<T> {
@@ -48,7 +51,7 @@ export async function api<T>(
     headers.set("Content-Type", "application/json");
   if (token && !headers.has("Authorization"))
     headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(url, {
     ...init,
     headers,
     cache: "no-store",
@@ -62,4 +65,12 @@ export async function api<T>(
         : body.error?.message,
     );
   return body.data;
+}
+
+export function api<T>(path: string, init: RequestInit = {}, token?: string) {
+  return request<T>(`${baseUrl}${path}`, init, token);
+}
+
+export function secureApi<T>(path: string, init: RequestInit = {}) {
+  return request<T>(`/api/catchup${path}`, init);
 }

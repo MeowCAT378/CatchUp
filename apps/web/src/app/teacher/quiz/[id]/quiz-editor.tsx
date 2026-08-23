@@ -10,7 +10,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
+import { Dialog } from "@/components/dialog";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
+import { SkeletonText } from "@/components/skeleton";
 
 type Quiz = {
   title: string;
@@ -176,7 +178,7 @@ export default function QuizEditor({
     <main className="page-shell">
       <div className="page-content max-w-3xl">
         <BackButton href="/teacher" />
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-[#1d1d1f] sm:text-5xl">
+        <h1 className="page-title mt-6">
           {quiz?.title ?? t("quiz.quizEditor")}
         </h1>
         {quiz && (
@@ -325,13 +327,13 @@ export default function QuizEditor({
               {t(`errors.${errorCode}`)}
             </p>
           ) : (
-            <p className="mt-6">{t("common.loading")}</p>
+            <div className="panel mt-6" aria-busy="true"><SkeletonText className="w-1/2" /><SkeletonText className="mt-5" /><SkeletonText className="mt-3 w-4/5" /></div>
           )
         ) : (
-          <ol className="mt-6 grid gap-4">
+          <ol className="mt-6 divide-y divide-neutral-200 border-y border-neutral-200 bg-white/55">
             {quiz.questions.length ? (
               quiz.questions.map((question) => (
-                <li key={question.id} className="soft-card">
+                <li key={question.id} className="px-1 py-5">
                   <div className="flex items-start justify-between gap-3">
                     <strong className="text-lg font-semibold text-[#1d1d1f]">
                       {question.text}
@@ -353,7 +355,7 @@ export default function QuizEditor({
                         type="button"
                         disabled={Boolean(deleting)}
                         onClick={() => setConfirming(question.id)}
-                        className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        className="btn-danger-ghost"
                       >
                         <TrashIcon className="h-5 w-5" aria-hidden="true" />
                         {t("quiz.deleteQuestion")}
@@ -367,8 +369,8 @@ export default function QuizEditor({
                           key={choice.id}
                           className={
                             quiz.type === "QUIZ" && choice.isCorrect
-                              ? "rounded-xl bg-neutral-200 px-3 py-2 text-[#1d1d1f]"
-                              : "rounded-xl bg-neutral-100 px-3 py-2"
+                              ? "rounded-lg bg-emerald-50 px-3 py-2 text-emerald-900"
+                              : "rounded-lg bg-neutral-100 px-3 py-2"
                           }
                         >
                           {choice.text}
@@ -382,7 +384,7 @@ export default function QuizEditor({
                 </li>
               ))
             ) : (
-              <li className="panel text-slate-500">
+              <li className="empty-state mt-0 border-x-0 border-t-0">
                 {isWordCloud
                   ? t("wordCloud.promptNotConfigured")
                   : t("quiz.questionEmpty")}
@@ -391,21 +393,23 @@ export default function QuizEditor({
           </ol>
         )}
         {confirming && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"
+          <Dialog
+            labelledBy="delete-question-title"
+            describedBy="delete-question-message"
+            onClose={() => setConfirming(undefined)}
+            className="max-w-sm"
           >
-            <div className="panel max-w-sm">
-              <p className="font-semibold text-slate-900">
+            <div className="panel">
+              <h2 id="delete-question-title" className="section-title">
                 {t("teacher.deleteQuestionConfirm")}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
+              </h2>
+              <p id="delete-question-message" className="mt-2 text-sm text-slate-600">
                 {t("teacher.deleteQuestionWarning")}
               </p>
               <div className="mt-5 flex justify-end gap-3">
                 <button
                   type="button"
+                  autoFocus
                   onClick={() => setConfirming(undefined)}
                   className="btn-secondary"
                 >
@@ -417,14 +421,14 @@ export default function QuizEditor({
                   onClick={() => {
                     void remove(confirming);
                   }}
-                  className="inline-flex min-h-11 items-center rounded-xl bg-red-600 px-4 py-2.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  className="btn-danger"
                 >
                   <TrashIcon className="h-5 w-5" aria-hidden="true" />
                   {t("quiz.deleteQuestion")}
                 </button>
               </div>
             </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </main>

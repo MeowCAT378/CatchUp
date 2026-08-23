@@ -11,6 +11,8 @@ import { results } from "./results";
 import { room } from "./room";
 import { wordCloud } from "./word-cloud";
 import { teacher } from "./teacher";
+import { admin } from "./admin";
+import { history } from "./history";
 
 const resources = {
   th: {
@@ -24,6 +26,8 @@ const resources = {
       ...wordCloud.th,
       ...results.th,
       ...errors.th,
+      ...admin.th,
+      ...history.th,
     },
   },
   en: {
@@ -37,6 +41,8 @@ const resources = {
       ...wordCloud.en,
       ...results.en,
       ...errors.en,
+      ...admin.en,
+      ...history.en,
     },
   },
 };

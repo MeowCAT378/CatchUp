@@ -21,20 +21,3 @@ export const RoomEvents = {
   quizCompleted: 'quiz:completed',
   error: 'room:error',
 } as const;
-export type RoomJoinPayload = {
-  code: string;
-  participantId?: string;
-  participantToken?: string;
-};
-export type AnswerSubmitPayload = {
-  code: string;
-  participantId: string;
-  participantToken: string;
-  choiceId: string;
-};
-export type WordCloudSubmitPayload = Omit<AnswerSubmitPayload, 'choiceId'> & {
-  text: string;
-};
-export type WordCloudVotePayload = Omit<AnswerSubmitPayload, 'choiceId'> & {
-  entryId: string;
-};

@@ -4,11 +4,19 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ApiExceptionFilter.name);
+
   catch(error: unknown, host: ArgumentsHost) {
+    if (!(error instanceof HttpException))
+      this.logger.error(
+        error instanceof Error ? error.message : 'Unknown backend error',
+        error instanceof Error ? error.stack : undefined,
+      );
     const response = host.switchToHttp().getResponse<Response>();
     const status =
       error instanceof HttpException

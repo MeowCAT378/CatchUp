@@ -5,8 +5,8 @@ const colors = [
   "text-cyan-700",
   "text-sky-700",
   "text-blue-700",
-  "text-indigo-700",
-  "text-violet-700",
+  "text-emerald-700",
+  "text-orange-800",
 ];
 
 export function wordCloudColor(text: string) {
@@ -58,7 +58,7 @@ export function WordCloudResults({
       <p className="text-center font-semibold text-neutral-500">
         {totalVotesLabel}: {totalVotes}
       </p>
-      <div className="mt-5 flex min-h-72 flex-wrap content-center justify-center gap-x-7 gap-y-5 overflow-hidden rounded-3xl bg-neutral-100 p-6 sm:min-h-96 sm:p-10">
+      <div className="mt-5 flex min-h-72 flex-wrap content-center justify-center gap-x-7 gap-y-5 overflow-hidden rounded-xl bg-neutral-100 p-6 sm:min-h-96 sm:p-10">
         {ranked.map((entry) => (
           <span
             key={entry.id}

@@ -30,6 +30,41 @@ describe('RoomsGateway CORS', () => {
   });
 });
 
+describe('RoomsGateway trusted client address', () => {
+  const originalHops = process.env.TRUST_PROXY_HOPS;
+
+  afterEach(() => {
+    if (originalHops === undefined) delete process.env.TRUST_PROXY_HOPS;
+    else process.env.TRUST_PROXY_HOPS = originalHops;
+  });
+
+  const addressFrom = (gateway: RoomsGateway, forwardedFor: string) =>
+    (
+      gateway as unknown as {
+        clientAddress(client: unknown): string;
+      }
+    ).clientAddress({
+      handshake: {
+        address: '10.0.0.9',
+        headers: { 'x-forwarded-for': forwardedFor },
+      },
+    });
+
+  it('ignores a forwarded address when no proxy is trusted', () => {
+    process.env.TRUST_PROXY_HOPS = '0';
+    const gateway = new RoomsGateway({} as never, {} as never);
+
+    expect(addressFrom(gateway, '203.0.113.1')).toBe('10.0.0.9');
+  });
+
+  it('uses the same configured proxy chain as HTTP', () => {
+    process.env.TRUST_PROXY_HOPS = '2';
+    const gateway = new RoomsGateway({} as never, {} as never);
+
+    expect(addressFrom(gateway, '198.51.100.8, 10.0.0.1')).toBe('198.51.100.8');
+  });
+});
+
 describe('RoomsGateway word cloud updates', () => {
   it('broadcasts the persisted aggregation and refreshes the host dashboard', async () => {
     const rooms = {
@@ -41,6 +76,7 @@ describe('RoomsGateway word cloud updates', () => {
     const emit = jest.fn();
     gateway.server = { to: jest.fn().mockReturnValue({ emit }) } as never;
     const client = {
+      handshake: { address: '127.0.0.1' },
       data: {
         role: 'participant',
         code: '123456',
@@ -74,5 +110,52 @@ describe('RoomsGateway word cloud updates', () => {
       roomId: 'room-1',
       connected: 0,
     });
+  });
+});
+
+describe('RoomsGateway event errors', () => {
+  it('returns FORBIDDEN for participant identity mismatches', async () => {
+    const gateway = new RoomsGateway({} as never, {} as never);
+    const client = {
+      data: {
+        role: 'participant',
+        code: '123456',
+        participantId: 'player',
+        participantToken: 'token',
+      },
+      emit: jest.fn(),
+    };
+
+    await gateway.answer(client as never, {
+      code: '123456',
+      participantId: 'other-player',
+      participantToken: 'token',
+      choiceId: 'choice',
+    });
+
+    expect(client.emit).toHaveBeenCalledWith(RoomEvents.error, {
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('returns VALIDATION_ERROR for malformed participant events', async () => {
+    const submit = jest.fn();
+    const gateway = new RoomsGateway({ submit } as never, {} as never);
+    const client = {
+      data: {
+        role: 'participant',
+        code: '123456',
+        participantId: 'player',
+        participantToken: 'token',
+      },
+      emit: jest.fn(),
+    };
+
+    await gateway.answer(client as never, undefined);
+
+    expect(client.emit).toHaveBeenCalledWith(RoomEvents.error, {
+      code: 'VALIDATION_ERROR',
+    });
+    expect(submit).not.toHaveBeenCalled();
   });
 });

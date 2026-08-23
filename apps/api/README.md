@@ -4,6 +4,13 @@ NestJS, Prisma, and PostgreSQL backend for CatchUp. The API listens on port
 `3001` by default and accepts browser and Socket.io traffic from the configured
 `WEB_ORIGIN` (normally `http://localhost:3000`).
 
+`TRUST_PROXY_HOPS` defaults to `0`. Set it to the exact number of trusted
+reverse-proxy hops (maximum `10`) only when every path to the API has that
+topology. The last trusted proxy must remove or overwrite incoming
+`X-Forwarded-For`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers. HTTP
+and Socket.io use the same setting. Rate limits are process-local and therefore
+support the current single-API-instance deployment only.
+
 ## Local setup
 
 1. From the repository root, copy `.env.example` to `.env`, set the required
@@ -31,8 +38,8 @@ development migration.
 
 ## Development seed
 
-Set `CATCHUP_SEED_PASSWORD` in the local API `.env` to at least 12
-non-whitespace characters, then run:
+Set `CATCHUP_SEED_ADMIN_PASSWORD` and `CATCHUP_SEED_KAZUMA_PASSWORD` in the
+local API `.env` to non-whitespace development passwords, then run:
 
 ```bash
 npm run seed
@@ -78,6 +85,21 @@ be running.
 | --- | --- |
 | API | `http://localhost:3001` |
 | Web origin | `http://localhost:3000` |
-| PostgreSQL | `127.0.0.1:5434` |
+| PostgreSQL | `127.0.0.1:5432` |
 | Test PostgreSQL | `127.0.0.1:5433` |
 | pgAdmin | `http://127.0.0.1:5050` |
+
+## Production image
+
+Build the API runtime and explicit migration target from this directory:
+
+```bash
+docker build --target runtime -t catchup-api .
+docker build --target migrate -t catchup-api-migrate .
+docker run --rm --env-file .env catchup-api-migrate
+docker run --rm --env-file .env -p 3001:3001 catchup-api
+```
+
+Run the migration image once during a controlled release. The API process does
+not apply migrations on startup. `GET /health/live` checks only the process;
+`GET /health/ready` verifies PostgreSQL with `SELECT 1`.

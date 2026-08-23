@@ -46,7 +46,7 @@ export default function RegisterPage() {
         <BackButton href="/login" />
         <div className="panel mt-4 w-full">
           <Logo className="mx-auto h-28 w-auto sm:h-32" />
-          <h1 className="mt-4 text-3xl font-black text-slate-900">
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
             {t("auth.register")}
           </h1>
           <form action={submit} className="mt-7 grid gap-4">
@@ -73,7 +73,7 @@ export default function RegisterPage() {
                 className="form-input"
               />
             </label>
-            <button disabled={loading} className="btn-primary">
+            <button type="submit" disabled={loading} className="btn-primary">
               <UserPlusIcon className="h-5 w-5" aria-hidden="true" />
               {loading ? t("common.loading") : t("auth.createAccount")}
             </button>

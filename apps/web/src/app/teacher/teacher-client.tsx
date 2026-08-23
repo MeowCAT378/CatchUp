@@ -14,7 +14,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
-import { Logo } from "@/components/logo";
+import { Dialog } from "@/components/dialog";
+import { SkeletonActivityCard } from "@/components/skeleton";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Quiz = {
   id: string;
@@ -25,7 +26,7 @@ type Quiz = {
 export default function TeacherClient({ token }: { token: string }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>();
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ActivityType>();
   const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
@@ -109,7 +110,7 @@ export default function TeacherClient({ token }: { token: string }) {
     setErrorCode("");
     try {
       await api(`/quizzes/${confirming.id}`, { method: "DELETE" }, token);
-      setQuizzes((items) => items.filter((quiz) => quiz.id !== confirming.id));
+      setQuizzes((items) => items?.filter((quiz) => quiz.id !== confirming.id) ?? []);
       setConfirming(undefined);
     } catch (error) {
       setErrorCode(apiErrorCode(error));
@@ -120,17 +121,10 @@ export default function TeacherClient({ token }: { token: string }) {
   return (
     <main className="page-shell">
       <div className="page-content max-w-6xl">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Logo className="h-20 w-auto sm:h-24" />
-            <h1 className="mt-1 text-4xl font-semibold tracking-tight text-[#1d1d1f] sm:text-5xl">
-              {t("quiz.myQuizzes")}
-            </h1>
-          </div>
-        </div>
-        <section className="panel mt-8">
+        <h1 className="page-title">{t("quiz.myQuizzes")}</h1>
+        <section className="filter-bar">
           {!type ? (
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid divide-y divide-neutral-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               {(
                 [
                   ["QUIZ", QuestionMarkCircleIcon],
@@ -142,13 +136,13 @@ export default function TeacherClient({ token }: { token: string }) {
                   key={activityType}
                   type="button"
                   onClick={() => setType(activityType)}
-                  className="soft-card text-left hover:-translate-y-0.5"
+                  className="px-3 py-4 text-left transition-colors first:pl-0 hover:bg-white/60 sm:px-5 sm:first:pl-3"
                 >
                   <Icon
                     className="h-7 w-7 text-neutral-700"
                     aria-hidden="true"
                   />
-                  <strong className="mt-3 block text-lg text-[#1d1d1f]">
+                  <strong className="mt-2 block text-base text-[#1d1d1f]">
                     {t(`activity.${activityType}.name`)}
                   </strong>
                   <span className="mt-1 block text-sm text-neutral-500">
@@ -200,33 +194,44 @@ export default function TeacherClient({ token }: { token: string }) {
             </p>
           )}
         </section>
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-          {quizzes.length ? (
+        <ul className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 bg-white/55">
+          {!quizzes ? (
+            <>
+              <li className="py-5"><SkeletonActivityCard /></li>
+              <li className="py-5"><SkeletonActivityCard /></li>
+            </>
+          ) : quizzes.length ? (
             quizzes.map((quiz) => (
               <li
                 key={quiz.id}
-                className="soft-card flex min-h-48 flex-col justify-between gap-5"
+                className="flex flex-col gap-4 px-1 py-5 sm:flex-row sm:items-center sm:justify-between"
               >
-                <span className="text-lg font-semibold text-[#1d1d1f]">
-                  {quiz.title}{" "}
-                  <span className="font-medium text-slate-500">
-                    {quiz.type === "WORD_CLOUD"
-                      ? `(${quiz._count.questions ? t("wordCloud.prompts") : t("wordCloud.promptNotConfigured")})`
-                      : `(${quiz._count.questions} ${t("quiz.questions")})`}
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <strong className="text-lg font-semibold text-[#1d1d1f]">
+                      {quiz.title}
+                    </strong>
+                    <ActivityTypeBadge type={quiz.type} />
                   </span>
-                  <ActivityTypeBadge type={quiz.type} />
+                  <span className="mt-1 block text-sm text-slate-500">
+                    {quiz.type === "WORD_CLOUD"
+                      ? quiz._count.questions
+                        ? t("wordCloud.prompts")
+                        : t("wordCloud.promptNotConfigured")
+                      : `${quiz._count.questions} ${t("quiz.questions")}`}
+                  </span>
+                  {!quiz._count.questions && (
+                    <span
+                      id={`open-room-hint-${quiz.id}`}
+                      className="mt-1 block text-sm text-amber-800"
+                    >
+                      {quiz.type === "WORD_CLOUD"
+                        ? t("wordCloud.promptNotConfigured")
+                        : t("quiz.addQuestionBeforeRoom")}
+                    </span>
+                  )}
                 </span>
-                {!quiz._count.questions && (
-                  <span
-                    id={`open-room-hint-${quiz.id}`}
-                    className="text-sm text-amber-800"
-                  >
-                    {quiz.type === "WORD_CLOUD"
-                      ? t("wordCloud.promptNotConfigured")
-                      : t("quiz.addQuestionBeforeRoom")}
-                  </span>
-                )}
-                <span className="flex flex-wrap gap-2">
+                <span className="flex shrink-0 flex-wrap gap-2">
                   <a
                     href={`/teacher/quiz/${quiz.id}`}
                     className="btn-secondary"
@@ -265,7 +270,7 @@ export default function TeacherClient({ token }: { token: string }) {
                     type="button"
                     disabled={busy || Boolean(deletingId)}
                     onClick={() => setConfirming(quiz)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-danger-ghost"
                   >
                     <TrashIcon className="h-5 w-5" aria-hidden="true" />
                     {t("common.delete")}
@@ -274,23 +279,21 @@ export default function TeacherClient({ token }: { token: string }) {
               </li>
             ))
           ) : (
-            <li className="panel text-center text-neutral-500 sm:col-span-2">
+            <li className="empty-state border-x-0 border-t-0">
               {t("quiz.quizEmpty")}
             </li>
           )}
         </ul>
         {confirming && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-activity-title"
-            aria-describedby="delete-activity-message"
-            className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"
+          <Dialog
+            labelledBy="delete-activity-title"
+            describedBy="delete-activity-message"
+            onClose={() => setConfirming(undefined)}
           >
-            <div className="panel max-w-md">
+            <div className="panel">
               <h2
                 id="delete-activity-title"
-                className="text-xl font-bold text-slate-900"
+                className="section-title"
               >
                 {t("teacher.deleteActivityTitle")}
               </h2>
@@ -300,6 +303,7 @@ export default function TeacherClient({ token }: { token: string }) {
               <div className="mt-5 flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
+                  autoFocus
                   disabled={Boolean(deletingId)}
                   onClick={() => setConfirming(undefined)}
                   className="btn-secondary"
@@ -310,7 +314,7 @@ export default function TeacherClient({ token }: { token: string }) {
                   type="button"
                   disabled={Boolean(deletingId)}
                   onClick={() => void remove()}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-danger"
                 >
                   <TrashIcon className="h-5 w-5" aria-hidden="true" />
                   {deletingId
@@ -319,7 +323,7 @@ export default function TeacherClient({ token }: { token: string }) {
                 </button>
               </div>
             </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </main>

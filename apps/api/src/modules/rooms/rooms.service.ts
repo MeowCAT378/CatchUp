@@ -1,6 +1,12 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
-import { ActivityType, Prisma, RoomPhase, RoomStatus } from '@prisma/client';
+import {
+  ActivityType,
+  Prisma,
+  Role,
+  RoomPhase,
+  RoomStatus,
+} from '@prisma/client';
 import { AppError } from '../../common/app-error';
 import { PrismaService } from '../../prisma/prisma.service';
 import { competitionRanks } from './ranking';
@@ -19,7 +25,7 @@ export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
   async create(quizId: string, hostId: string) {
     const quiz = await this.prisma.quiz.findFirst({
-      where: { id: quizId, ownerId: hostId },
+      where: { id: quizId, ownerId: hostId, deletedAt: null },
       include: { _count: { select: { questions: true } } },
     });
     if (!quiz) throw new AppError('QUIZ_NOT_FOUND', 404, 'Quiz not found');
@@ -30,7 +36,13 @@ export class RoomsService {
     for (let i = 0; i < 5; i++) {
       try {
         return await this.prisma.room.create({
-          data: { quizId, hostId, code: this.code() },
+          data: {
+            quizId,
+            hostId,
+            code: this.code(),
+            activityTitle: quiz.title,
+            activityType: quiz.type,
+          },
         });
       } catch (e) {
         if (
@@ -112,17 +124,17 @@ export class RoomsService {
         : null;
     const wordSubmitted = Boolean(
       participantId && question && lifecycle.canSubmitWord
-        ? (await this.prisma.wordCloudEntry.findFirst({
+        ? ((await this.prisma.wordCloudEntry.findFirst({
             where: { roomId: room.id, questionId: question.id, participantId },
             select: { id: true },
           })) ??
-          (await this.prisma.wordCloudVote.findFirst({
-            where: {
-              participantId,
-              entry: { roomId: room.id, questionId: question.id },
-            },
-            select: { id: true },
-          }))
+            (await this.prisma.wordCloudVote.findFirst({
+              where: {
+                participantId,
+                entry: { roomId: room.id, questionId: question.id },
+              },
+              select: { id: true },
+            })))
         : null,
     );
     const revealsCorrectChoice =
@@ -164,14 +176,20 @@ export class RoomsService {
     const room = await this.hostRoom(code, hostId);
     if (!roomActions(room.quiz.type, room.status, room.phase).canStart)
       throw new AppError('INVALID_ROOM_PHASE', 409, 'Room cannot be started');
-    return this.prisma.room.update({
-      where: { id: room.id },
-      data: {
+    return this.transition(
+      room.id,
+      {
+        status: room.status,
+        phase: room.phase,
+        currentQuestionIndex: room.currentQuestionIndex,
+      },
+      {
         status: RoomStatus.ACTIVE,
         phase: RoomPhase.ACTIVE,
         currentQuestionIndex: 0,
+        startedAt: new Date(),
       },
-    });
+    );
   }
   async reveal(code: string, hostId: string) {
     const room = await this.hostRoom(code, hostId);
@@ -191,10 +209,15 @@ export class RoomsService {
     if (!question)
       throw new AppError('INVALID_ROOM_PHASE', 409, 'No active question');
     return {
-      room: await this.prisma.room.update({
-        where: { id: room.id },
-        data: { phase: RoomPhase.REVEALED },
-      }),
+      room: await this.transition(
+        room.id,
+        {
+          status: room.status,
+          phase: room.phase,
+          currentQuestionIndex: room.currentQuestionIndex,
+        },
+        { phase: RoomPhase.REVEALED },
+      ),
       correctChoiceId: activityLifecycle(room.quiz.type).requiresCorrectChoice
         ? (question.choices.find((choice) => choice.isCorrect)?.id ?? null)
         : null,
@@ -211,22 +234,39 @@ export class RoomsService {
     if (!roomActions(room.quiz.type, room.status, room.phase).canAdvance)
       throw new AppError('INVALID_ROOM_PHASE', 409, 'Question cannot advance');
     const next = room.currentQuestionIndex + 1;
-    return this.prisma.room.update({
-      where: { id: room.id },
-      data:
-        next >= room.quiz.questions.length
-          ? { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED }
-          : { currentQuestionIndex: next, phase: RoomPhase.ACTIVE },
-    });
+    return this.transition(
+      room.id,
+      {
+        status: room.status,
+        phase: room.phase,
+        currentQuestionIndex: room.currentQuestionIndex,
+      },
+      next >= room.quiz.questions.length
+        ? {
+            status: RoomStatus.FINISHED,
+            phase: RoomPhase.COMPLETED,
+            endedAt: new Date(),
+          }
+        : { currentQuestionIndex: next, phase: RoomPhase.ACTIVE },
+    );
   }
   async complete(code: string, hostId: string) {
     const room = await this.hostRoom(code, hostId);
     if (!roomActions(room.quiz.type, room.status, room.phase).canComplete)
       throw new AppError('INVALID_ROOM_PHASE', 409, 'Room cannot be completed');
-    return this.prisma.room.update({
-      where: { id: room.id },
-      data: { status: RoomStatus.FINISHED, phase: RoomPhase.COMPLETED },
-    });
+    return this.transition(
+      room.id,
+      {
+        status: room.status,
+        phase: room.phase,
+        currentQuestionIndex: room.currentQuestionIndex,
+      },
+      {
+        status: RoomStatus.FINISHED,
+        phase: RoomPhase.COMPLETED,
+        endedAt: new Date(),
+      },
+    );
   }
   async submit(
     code: string,
@@ -431,14 +471,10 @@ export class RoomsService {
     });
     if (!entry || entry.participantId === participantId)
       throw new AppError('FORBIDDEN', 403, 'Entry cannot be voted for');
-    await this.prisma.$transaction(async (prisma) => {
-      await prisma.wordCloudVote.deleteMany({
-        where: {
-          participantId,
-          entry: { roomId: room.id, questionId: question.id },
-        },
-      });
-      await prisma.wordCloudVote.create({ data: { entryId, participantId } });
+    await this.prisma.wordCloudVote.upsert({
+      where: { participantId },
+      update: { entryId },
+      create: { entryId, participantId },
     });
     return this.wordCloudEntries(room.id, question.id, participantId);
   }
@@ -554,8 +590,18 @@ export class RoomsService {
     userId?: string,
   ) {
     const room = await this.room(code);
-    if (userId === room.hostId)
+    if (userId === room.hostId) {
+      const host = await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+          isDisabled: false,
+          role: { in: [Role.HOST, Role.ADMIN] },
+        },
+        select: { id: true },
+      });
+      if (!host) throw new ForbiddenException('Host access is disabled');
       return { code: room.code, roomId: room.id, role: 'host' as const };
+    }
     if (!participantId || !participantToken)
       throw new ForbiddenException('Join the room first');
     const participant = await this.prisma.participant.findFirst({
@@ -702,6 +748,27 @@ export class RoomsService {
       }))
       .sort((a, b) => b.votes - a.votes || a.text.localeCompare(b.text))
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  }
+  private async transition(
+    id: string,
+    expected: {
+      status: RoomStatus;
+      phase: RoomPhase;
+      currentQuestionIndex: number;
+    },
+    data: Prisma.RoomUpdateManyMutationInput,
+  ) {
+    const { count } = await this.prisma.room.updateMany({
+      where: { id, ...expected },
+      data,
+    });
+    if (count !== 1)
+      throw new AppError(
+        'INVALID_ROOM_PHASE',
+        409,
+        'Room state changed before the action completed',
+      );
+    return this.prisma.room.findUniqueOrThrow({ where: { id } });
   }
   private room(code: string) {
     return this.prisma.room

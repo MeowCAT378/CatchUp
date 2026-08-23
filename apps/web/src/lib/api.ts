@@ -1,4 +1,19 @@
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+function deploymentUrl(value: string | undefined, name: string) {
+  const url = value?.trim().replace(/\/$/, "");
+  if (url) return url;
+  if (process.env.NODE_ENV === "production")
+    throw new Error(`${name} is required in production`);
+  return "http://localhost:3001";
+}
+
+export const apiBaseUrl = deploymentUrl(
+  process.env.NEXT_PUBLIC_API_URL,
+  "NEXT_PUBLIC_API_URL",
+);
+export const socketBaseUrl = process.env.NEXT_PUBLIC_SOCKET_URL?.trim().replace(
+  /\/$/,
+  "",
+) || apiBaseUrl;
 
 export type ApiErrorCode =
   | "ROOM_NOT_FOUND"
@@ -68,7 +83,7 @@ async function request<T>(
 }
 
 export function api<T>(path: string, init: RequestInit = {}, token?: string) {
-  return request<T>(`${baseUrl}${path}`, init, token);
+  return request<T>(`${apiBaseUrl}${path}`, init, token);
 }
 
 export function secureApi<T>(path: string, init: RequestInit = {}) {

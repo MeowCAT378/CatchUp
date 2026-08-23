@@ -27,6 +27,7 @@ jobs:
         working-directory: apps/api
     env:
       DATABASE_URL: postgresql://catchup_ci:catchup_ci_password@localhost:5432/catchup_ci_test?schema=public
+      DIRECT_URL: postgresql://catchup_ci:catchup_ci_password@localhost:5432/catchup_ci_test?schema=public
       JWT_SECRET: ci-only-jwt-secret-with-at-least-32-characters
       WEB_ORIGIN: http://localhost:3000
       TRUST_PROXY_HOPS: 0
@@ -89,6 +90,7 @@ jobs:
         working-directory: apps/api
     env:
       DATABASE_URL: postgresql://catchup_ci:catchup_ci_password@localhost:5432/catchup_ci_test?schema=public
+      DIRECT_URL: postgresql://catchup_ci:catchup_ci_password@localhost:5432/catchup_ci_test?schema=public
       CATCHUP_TEST_DATABASE_URL: postgresql://catchup_ci:catchup_ci_password@localhost:5432/catchup_ci_test?schema=public
       JWT_SECRET: ci-only-jwt-secret-with-at-least-32-characters
       WEB_ORIGIN: http://localhost:3000
@@ -189,6 +191,7 @@ jobs:
         run: |
           docker run --rm --network catchup-ci \
             --env DATABASE_URL=postgresql://catchup_ci:catchup_ci_password@catchup-postgres:5432/catchup_ci_test?schema=public \
+            --env DIRECT_URL=postgresql://catchup_ci:catchup_ci_password@catchup-postgres:5432/catchup_ci_test?schema=public \
             catchup-api-migrate:ci
       - name: Verify API health and readiness
         run: |

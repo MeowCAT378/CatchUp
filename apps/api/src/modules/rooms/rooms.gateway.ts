@@ -18,6 +18,7 @@ import {
   parseTrustProxyHops,
   trustedClientAddress,
 } from '../../common/network/trusted-client-address';
+import { webOrigin } from '../../common/network/web-origin';
 type SocketData = {
   userId?: string;
   code?: string;
@@ -42,9 +43,11 @@ export const socketCorsOrigin = (
   origin: string | undefined,
   callback: (error: Error | null, allowed?: boolean) => void,
 ) => {
-  const configuredOrigin =
-    process.env.WEB_ORIGIN?.trim() || 'http://localhost:3000';
-  callback(null, origin === undefined || origin === configuredOrigin);
+  try {
+    callback(null, origin === undefined || origin === webOrigin());
+  } catch (error) {
+    callback(error as Error);
+  }
 };
 
 @WebSocketGateway({

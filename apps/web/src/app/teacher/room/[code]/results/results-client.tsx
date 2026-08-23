@@ -10,6 +10,7 @@ import { BackButton } from "@/components/back-button";
 import { SkeletonResults } from "@/components/skeleton";
 import {
   api,
+  apiBaseUrl,
   apiErrorCode,
   ApiError,
   secureApi,
@@ -116,7 +117,7 @@ export default function ResultsClient({
       const response = await fetch(
         sessionId
           ? `/api/catchup/rooms/history/${sessionId}/export.${format}`
-          : `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms/${code}/results/export.${format}`,
+          : `${apiBaseUrl}/rooms/${code}/results/export.${format}`,
         sessionId ? {} : { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!response.ok) {

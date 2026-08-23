@@ -14,6 +14,10 @@ import { AppError } from '../../common/app-error';
 import { RoomsService } from './rooms.service';
 import { RoomEvents } from './room-events';
 import { checkRateLimit } from '../../common/rate-limit';
+import {
+  parseTrustProxyHops,
+  trustedClientAddress,
+} from '../../common/network/trusted-client-address';
 type SocketData = {
   userId?: string;
   code?: string;
@@ -50,6 +54,9 @@ export const socketCorsOrigin = (
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server!: Namespace;
   private readonly presence = new Map<string, Set<string>>();
+  private readonly trustedProxyHops = parseTrustProxyHops(
+    process.env.TRUST_PROXY_HOPS,
+  );
   constructor(
     private readonly rooms: RoomsService,
     private readonly jwt: JwtService,
@@ -84,7 +91,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       )
         throw invalidPayload();
       await this.leave(client);
-      checkRateLimit(`socket-join:${client.handshake.address}`, 300, 60_000);
+      checkRateLimit(`socket-join:${this.clientAddress(client)}`, 300, 60_000);
       const access = await this.rooms.socketAccess(
         payload.code,
         payload.participantId,
@@ -177,7 +184,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       )
         throw new ForbiddenException();
       checkRateLimit(
-        `socket-action-address:${client.handshake.address}`,
+        `socket-action-address:${this.clientAddress(client)}`,
         600,
         10_000,
       );
@@ -332,7 +339,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       )
         throw new ForbiddenException();
       checkRateLimit(
-        `socket-action-address:${client.handshake.address}`,
+        `socket-action-address:${this.clientAddress(client)}`,
         600,
         10_000,
       );
@@ -396,6 +403,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   private hostGroup(code: string) {
     return `room:${code}:hosts`;
+  }
+  private clientAddress(client: Socket) {
+    return trustedClientAddress(
+      client.handshake.address,
+      client.handshake.headers?.['x-forwarded-for'],
+      this.trustedProxyHops,
+    );
   }
   private error(client: Socket, error: unknown) {
     const code =

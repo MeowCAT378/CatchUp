@@ -30,6 +30,41 @@ describe('RoomsGateway CORS', () => {
   });
 });
 
+describe('RoomsGateway trusted client address', () => {
+  const originalHops = process.env.TRUST_PROXY_HOPS;
+
+  afterEach(() => {
+    if (originalHops === undefined) delete process.env.TRUST_PROXY_HOPS;
+    else process.env.TRUST_PROXY_HOPS = originalHops;
+  });
+
+  const addressFrom = (gateway: RoomsGateway, forwardedFor: string) =>
+    (
+      gateway as unknown as {
+        clientAddress(client: unknown): string;
+      }
+    ).clientAddress({
+      handshake: {
+        address: '10.0.0.9',
+        headers: { 'x-forwarded-for': forwardedFor },
+      },
+    });
+
+  it('ignores a forwarded address when no proxy is trusted', () => {
+    process.env.TRUST_PROXY_HOPS = '0';
+    const gateway = new RoomsGateway({} as never, {} as never);
+
+    expect(addressFrom(gateway, '203.0.113.1')).toBe('10.0.0.9');
+  });
+
+  it('uses the same configured proxy chain as HTTP', () => {
+    process.env.TRUST_PROXY_HOPS = '2';
+    const gateway = new RoomsGateway({} as never, {} as never);
+
+    expect(addressFrom(gateway, '198.51.100.8, 10.0.0.1')).toBe('198.51.100.8');
+  });
+});
+
 describe('RoomsGateway word cloud updates', () => {
   it('broadcasts the persisted aggregation and refreshes the host dashboard', async () => {
     const rooms = {

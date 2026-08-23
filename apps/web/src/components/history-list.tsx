@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { DateFilterPicker } from "@/components/date-filter-picker";
+import { Select, type SelectOption } from "@/components/select";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonTable } from "@/components/skeleton";
 
@@ -51,6 +52,23 @@ export function HistoryList({
   const [loadedQuery, setLoadedQuery] = useState("");
   const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
   const filterControlClassName = "form-input mt-0 h-11 min-h-0";
+  const activityOptions: SelectOption[] = [
+    { value: "", label: t("history.allTypes") },
+    { value: "QUIZ", label: t("activity.QUIZ.name") },
+    { value: "POLL", label: t("activity.POLL.name") },
+    { value: "WORD_CLOUD", label: t("activity.WORD_CLOUD.name") },
+  ];
+  const statusOptions: SelectOption[] = [
+    { value: "", label: t("history.allStatuses") },
+    { value: "LOBBY", label: t("history.lobby") },
+    { value: "ACTIVE", label: t("history.active") },
+    { value: "FINISHED", label: t("history.finished") },
+  ];
+  const statusClassName = {
+    LOBBY: "border-slate-200 bg-slate-100 text-slate-700",
+    ACTIVE: "border-sky-200 bg-sky-50 text-sky-800",
+    FINISHED: "border-teal-200 bg-teal-50 text-teal-800",
+  } as const;
   const dateRangeInvalid = Boolean(from && to && from > to);
   const query = useMemo(() => {
     const value = new URLSearchParams({ page: String(page) });
@@ -104,7 +122,7 @@ export function HistoryList({
     return `${Math.max(0, Math.round((new Date(item.endedAt).getTime() - new Date(item.startedAt).getTime()) / 60_000))} min`;
   };
   return (
-    <main className="page-shell">
+    <main className="page-shell history-page">
       <div className="page-content max-w-7xl">
         <h1 className="page-title">{t("history.title")}</h1>
         <form
@@ -112,7 +130,7 @@ export function HistoryList({
           className="filter-bar grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(220px,1.5fr)_repeat(5,minmax(0,1fr))_auto]"
         >
           <label>
-            <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.searchLabel")}</span>
+            <span className="mb-1.5 block text-xs font-medium text-slate-700">{t("history.searchLabel")}</span>
             <input
               id="history-search"
               value={searchInput}
@@ -121,32 +139,19 @@ export function HistoryList({
               className={filterControlClassName}
             />
           </label>
-          <label>
-            <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.activityType")}</span>
-            <select id="history-activity-type" value={activityType} onChange={(event) => { setPage(1); setActivityType(event.target.value); }} className={filterControlClassName}>
-              <option value="">{t("history.allTypes")}</option>
-              <option value="QUIZ">{t("activity.QUIZ.name")}</option>
-              <option value="POLL">{t("activity.POLL.name")}</option>
-              <option value="WORD_CLOUD">{t("activity.WORD_CLOUD.name")}</option>
-            </select>
-          </label>
-          <label>
-            <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.status")}</span>
-            <select id="history-status" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className={filterControlClassName}>
-              <option value="">{t("history.allStatuses")}</option>
-              <option value="LOBBY">{t("history.lobby")}</option>
-              <option value="ACTIVE">{t("history.active")}</option>
-              <option value="FINISHED">{t("history.finished")}</option>
-            </select>
-          </label>
+          <div>
+            <label id="history-activity-type-label" htmlFor="history-activity-type" className="mb-1.5 block text-xs font-medium text-slate-700">{t("history.activityType")}</label>
+            <Select id="history-activity-type" labelId="history-activity-type-label" value={activityType} onValueChange={(value) => { setPage(1); setActivityType(value); }} options={activityOptions} />
+          </div>
+          <div>
+            <label id="history-status-label" htmlFor="history-status" className="mb-1.5 block text-xs font-medium text-slate-700">{t("history.status")}</label>
+            <Select id="history-status" labelId="history-status-label" value={status} onValueChange={(value) => { setPage(1); setStatus(value); }} options={statusOptions} />
+          </div>
           {admin && (
-            <label>
-              <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.teacherFilter")}</span>
-              <select id="history-teacher" value={teacherId} onChange={(event) => { setPage(1); setTeacherId(event.target.value); }} className={filterControlClassName}>
-                <option value="">{t("history.allTeachers")}</option>
-                {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name ?? teacher.email}</option>)}
-              </select>
-            </label>
+            <div>
+              <label id="history-teacher-label" htmlFor="history-teacher" className="mb-1.5 block text-xs font-medium text-slate-700">{t("history.teacherFilter")}</label>
+              <Select id="history-teacher" labelId="history-teacher-label" value={teacherId} onValueChange={(value) => { setPage(1); setTeacherId(value); }} options={[{ value: "", label: t("history.allTeachers") }, ...teachers.map((teacher) => ({ value: teacher.id, label: teacher.name ?? teacher.email }))]} searchable searchPlaceholder={t("history.searchTeachers")} emptyLabel={t("history.noMatchingTeachers")} />
+            </div>
           )}
           <DateFilterPicker id="history-from" label={t("history.from")} placeholder={t("history.selectDate")} value={from} onChange={(value) => { setPage(1); setFrom(value); }} locale={i18n.language} clearLabel={t("history.clearDate")} todayLabel={t("history.today")} previousMonthLabel={t("history.previousMonth")} nextMonthLabel={t("history.nextMonth")} max={to} />
           <DateFilterPicker id="history-to" label={t("history.to")} placeholder={t("history.selectDate")} value={to} onChange={(value) => { setPage(1); setTo(value); }} locale={i18n.language} clearLabel={t("history.clearDate")} todayLabel={t("history.today")} previousMonthLabel={t("history.previousMonth")} nextMonthLabel={t("history.nextMonth")} min={from} />
@@ -199,13 +204,13 @@ export function HistoryList({
                     <td className="hidden lg:table-cell">{duration(item)}</td>
                     <td className="hidden tabular-nums lg:table-cell">{item.participantCount}</td>
                     <td>
-                      <span className="badge">
+                      <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-sm font-medium ${statusClassName[item.status]}`}>
                         {t(`history.${item.status.toLowerCase()}`)}
                       </span>
                     </td>
                     <td>
                       <a
-                        className="btn-secondary px-3"
+                        className="btn-secondary border-slate-300 px-3 text-slate-800 hover:border-slate-400"
                         href={`${basePath}/${item.id}`}
                       >
                         {t("history.viewResults")}

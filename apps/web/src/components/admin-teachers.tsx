@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonTable } from "@/components/skeleton";
+import { Select, type SelectOption } from "@/components/select";
 
 type Teacher = {
   id: string;
@@ -27,6 +28,11 @@ export function AdminTeachers() {
   const [page, setPage] = useState(1);
   const [loadedQuery, setLoadedQuery] = useState("");
   const [error, setError] = useState<ApiErrorCode | "">("");
+  const statusOptions: SelectOption[] = [
+    { value: "", label: t("admin.allStatuses") },
+    { value: "ACTIVE", label: t("admin.active") },
+    { value: "DISABLED", label: t("admin.disabled") },
+  ];
   const query = useMemo(() => {
     const value = new URLSearchParams({ page: String(page) });
     if (search) value.set("search", search);
@@ -66,28 +72,27 @@ export function AdminTeachers() {
         <h1 className="page-title">{t("admin.teachers")}</h1>
         <form
           onSubmit={submit}
-          className="filter-bar grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+          className="filter-bar grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)_180px]"
         >
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder={t("admin.searchTeachers")}
-            className="form-input mt-0 flex-1"
-          />
-          <select
-            value={status}
-            onChange={(event) => {
-              setPage(1);
-              setStatus(event.target.value);
-            }}
-            aria-label={t("admin.status")}
-            className="form-input mt-0 w-auto"
-          >
-            <option value="">{t("admin.allStatuses")}</option>
-            <option value="ACTIVE">{t("admin.active")}</option>
-            <option value="DISABLED">{t("admin.disabled")}</option>
-          </select>
-          <button className="btn-primary">{t("history.search")}</button>
+          <label>
+            <span className="mb-1.5 block text-xs font-medium text-slate-700">
+              {t("admin.search")}
+            </span>
+            <input
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder={t("admin.searchTeachers")}
+              className="form-input mt-0 h-11 min-h-0"
+            />
+          </label>
+          <div>
+            <label id="admin-teacher-status-label" htmlFor="admin-teacher-status" className="mb-1.5 block text-xs font-medium text-slate-700">{t("admin.status")}</label>
+            <Select id="admin-teacher-status" labelId="admin-teacher-status-label" value={status} onValueChange={(value) => { setPage(1); setStatus(value); }} options={statusOptions} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="block text-xs font-medium" aria-hidden="true">&nbsp;</span>
+            <button className="btn-primary h-11 min-h-0 w-full">{t("admin.search")}</button>
+          </div>
         </form>
         {error && (
           <p className="alert-error mt-5" role="alert">

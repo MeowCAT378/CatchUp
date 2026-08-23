@@ -108,7 +108,7 @@ export function DateFilterPicker({
 
   return (
     <div className={`relative ${className ?? ""}`} ref={pickerRef}>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-slate-600">
+      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-slate-700">
         {label}
       </label>
       <button
@@ -123,8 +123,8 @@ export function DateFilterPicker({
         }}
         className="form-input mt-0 flex h-11 min-h-0 items-center justify-between text-left"
       >
-        <span className={value ? "text-[#1d1d1f]" : "text-slate-500"}>{formattedValue}</span>
-        <CalendarDaysIcon className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
+        <span className={value ? "text-slate-900" : "text-slate-600"}>{formattedValue}</span>
+        <CalendarDaysIcon className="size-4 shrink-0 text-slate-600" aria-hidden="true" />
       </button>
       {open && (
         <div

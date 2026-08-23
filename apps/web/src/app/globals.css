@@ -100,6 +100,12 @@ html[lang="th"] {
       ),
       #f5f7fa;
   }
+  .page-shell.history-page {
+    background:
+      radial-gradient(circle at 12% 12%, rgba(125, 211, 252, 0.12), transparent 34%),
+      radial-gradient(circle at 88% 18%, rgba(94, 234, 212, 0.08), transparent 38%),
+      #f5f7fa;
+  }
   .page-content {
     @apply relative z-10 mx-auto w-full max-w-7xl px-5 pb-10 pt-24 sm:px-8 sm:pb-14 sm:pt-28 lg:px-10;
   }
@@ -162,5 +168,47 @@ html[lang="th"] {
   }
   .empty-state {
     @apply mt-6 rounded-xl border border-dashed border-neutral-300 bg-white/60 px-5 py-10 text-center text-neutral-600;
+  }
+  .history-page .filter-bar {
+    @apply border-slate-300;
+  }
+  .history-page .form-input {
+    @apply border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 hover:border-slate-400 focus:border-sky-700 focus:ring-sky-700/10;
+  }
+  .history-page .table-surface {
+    @apply border-slate-300 bg-white;
+  }
+  .history-page .data-table {
+    @apply text-slate-800;
+  }
+  .history-page .data-table thead {
+    @apply bg-slate-100 text-slate-700;
+  }
+  .history-page .data-table tbody tr {
+    @apply border-slate-200 hover:bg-slate-50/70;
+  }
+  .select-content {
+    animation: select-enter 140ms ease-out;
+  }
+  .select-option {
+    @apply flex min-h-9 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-slate-800 transition-colors hover:bg-slate-100;
+  }
+  .select-option-active {
+    @apply bg-slate-100 text-[#0f172a];
+  }
+  .select-option-selected {
+    @apply bg-sky-50 font-medium text-sky-800;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .select-content {
+      animation: none;
+    }
+  }
+}
+
+@keyframes select-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
   }
 }

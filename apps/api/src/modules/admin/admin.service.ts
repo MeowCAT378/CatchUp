@@ -19,6 +19,28 @@ const teacherSelect = {
   updatedAt: true,
 } satisfies Prisma.UserSelect;
 
+const BANGKOK_TIME_ZONE = 'Asia/Bangkok';
+const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function bangkokDayBounds(now: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: BANGKOK_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+  const startOfToday = new Date(
+    Date.UTC(year, month - 1, day) - BANGKOK_OFFSET_MS,
+  );
+  return {
+    startOfToday,
+    startOfTomorrow: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000),
+  };
+}
+
 @Injectable()
 export class AdminService {
   constructor(
@@ -27,8 +49,7 @@ export class AdminService {
   ) {}
 
   async overview() {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    const { startOfToday, startOfTomorrow } = bangkokDayBounds(new Date());
     const [
       totalTeachers,
       activeTeachers,
@@ -45,7 +66,9 @@ export class AdminService {
         where: { role: Role.HOST, isDisabled: true },
       }),
       this.prisma.quiz.count({ where: { deletedAt: null } }),
-      this.prisma.room.count({ where: { createdAt: { gte: today } } }),
+      this.prisma.room.count({
+        where: { createdAt: { gte: startOfToday, lt: startOfTomorrow } },
+      }),
       this.prisma.room.count({ where: { status: RoomStatus.FINISHED } }),
     ]);
     return {

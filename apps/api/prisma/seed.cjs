@@ -19,10 +19,14 @@ async function main() {
 
   const adminEmail = process.env.CATCHUP_SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.CATCHUP_SEED_ADMIN_PASSWORD;
+  const kazumaPassword = process.env.CATCHUP_SEED_KAZUMA_PASSWORD;
   if (!adminEmail || !adminPassword?.trim()) {
     throw new Error(
       'CATCHUP_SEED_ADMIN_EMAIL and CATCHUP_SEED_ADMIN_PASSWORD must be set',
     );
+  }
+  if (!kazumaPassword?.trim()) {
+    throw new Error('CATCHUP_SEED_KAZUMA_PASSWORD must be set');
   }
 
   const accounts = [
@@ -186,6 +190,82 @@ async function main() {
     });
   }
 
+  const kazuma = await prisma.user.upsert({
+    where: { email: 'kazama@test.com' },
+    update: {
+      name: 'Kazuma Kiryu',
+      passwordHash: await bcrypt.hash(kazumaPassword, 12),
+      role: 'HOST',
+      isDisabled: false,
+    },
+    create: {
+      id: 'seed-user-kazuma-kiryu',
+      email: 'kazama@test.com',
+      name: 'Kazuma Kiryu',
+      passwordHash: await bcrypt.hash(kazumaPassword, 12),
+      role: 'HOST',
+      isDisabled: false,
+    },
+  });
+  const activities = [
+    {
+      id: 'seed-kazuma-quiz',
+      title: 'English General Knowledge Quiz',
+      description: 'A ready-to-play English quiz for the classroom.',
+      type: 'QUIZ',
+      questions: [
+        ['Which planet is known as the Red Planet?', [['Mars', true], ['Venus', false], ['Jupiter', false], ['Mercury', false]]],
+        ['What is the largest ocean on Earth?', [['Pacific Ocean', true], ['Atlantic Ocean', false], ['Indian Ocean', false], ['Arctic Ocean', false]]],
+        ['Who wrote Romeo and Juliet?', [['William Shakespeare', true], ['Charles Dickens', false], ['Jane Austen', false], ['Mark Twain', false]]],
+      ],
+    },
+    {
+      id: 'seed-kazuma-poll-1',
+      title: 'Classroom Preferences Poll',
+      description: 'A ready-to-play English poll about classroom preferences.',
+      type: 'POLL',
+      questions: [
+        ['Which activity helps you learn best?', [['Group discussion', false], ['Practice quiz', false], ['Watching a video', false], ['Reading quietly', false]]],
+        ['What time do you prefer for a class break?', [['10 minutes', false], ['15 minutes', false], ['20 minutes', false], ['No preference', false]]],
+      ],
+    },
+    {
+      id: 'seed-kazuma-poll-2',
+      title: 'Weekend Plans Poll',
+      description: 'A ready-to-play English poll about weekend plans.',
+      type: 'POLL',
+      questions: [
+        ['What is your favorite weekend activity?', [['Playing sports', false], ['Watching movies', false], ['Reading books', false], ['Meeting friends', false]]],
+        ['Where would you most like to travel?', [['A beach', false], ['A mountain', false], ['A city', false], ['A national park', false]]],
+      ],
+    },
+  ];
+
+  for (const activity of activities) {
+    const { questions, ...activityData } = activity;
+    await prisma.quiz.upsert({
+      where: { id: activity.id },
+      update: { ...activityData, ownerId: kazuma.id, deletedAt: null },
+      create: { ...activityData, ownerId: kazuma.id },
+    });
+    for (const [position, [text, choices]] of questions.entries()) {
+      const question = await prisma.question.upsert({
+        where: { quizId_position: { quizId: activity.id, position } },
+        update: { quizId: activity.id, text, position },
+        create: { quizId: activity.id, text, position },
+      });
+      const questionId = question.id;
+      for (const [choiceIndex, [choiceText, isCorrect]] of choices.entries()) {
+        const choiceId = `${questionId}-choice-${choiceIndex + 1}`;
+        await prisma.choice.upsert({
+          where: { id: choiceId },
+          update: { questionId, text: choiceText, isCorrect },
+          create: { id: choiceId, questionId, text: choiceText, isCorrect },
+        });
+      }
+    }
+  }
+
   console.log('CatchUp development database seeded.\n\nAdmin:');
   console.log(`Email: ${adminEmail}`);
   console.log('Password: [loaded from CATCHUP_SEED_ADMIN_PASSWORD]');
@@ -194,6 +274,9 @@ async function main() {
     console.log(`Email: ${account.email}`);
     console.log(`Password: ${account.password}`);
   }
+  console.log('\nKazuma Kiryu:');
+  console.log('Email: kazama@test.com');
+  console.log('Password: [loaded from CATCHUP_SEED_KAZUMA_PASSWORD]');
 }
 
 if (require.main === module) {

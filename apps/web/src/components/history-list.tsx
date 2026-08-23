@@ -155,7 +155,7 @@ export function HistoryList({
           )}
           <DateFilterPicker id="history-from" label={t("history.from")} placeholder={t("history.selectDate")} value={from} onChange={(value) => { setPage(1); setFrom(value); }} locale={i18n.language} clearLabel={t("history.clearDate")} todayLabel={t("history.today")} previousMonthLabel={t("history.previousMonth")} nextMonthLabel={t("history.nextMonth")} max={to} />
           <DateFilterPicker id="history-to" label={t("history.to")} placeholder={t("history.selectDate")} value={to} onChange={(value) => { setPage(1); setTo(value); }} locale={i18n.language} clearLabel={t("history.clearDate")} todayLabel={t("history.today")} previousMonthLabel={t("history.previousMonth")} nextMonthLabel={t("history.nextMonth")} min={from} />
-          <button className="btn-primary h-11 min-h-0 self-end">{t("history.searchButton")}</button>
+          <button type="submit" className="btn-primary h-11 min-h-0 self-end">{t("history.searchButton")}</button>
         </form>
         {dateRangeInvalid && <p className="mt-2 text-sm text-red-700" role="alert">{t("history.invalidDateRange")}</p>}
         {errorCode && (
@@ -167,7 +167,7 @@ export function HistoryList({
           <div aria-busy="true"><SkeletonTable columns={admin ? 7 : 6} /></div>
         ) : result?.items.length ? (
           <div className="table-surface">
-            <table className="data-table">
+            <table className="data-table min-w-[34rem] sm:min-w-0">
               <thead>
                 <tr>
                   <th>{t("admin.activities")}</th>
@@ -223,7 +223,7 @@ export function HistoryList({
           </div>
         ) : (
           <div className="empty-state">
-            <h2 className="text-xl font-bold">{t("history.noHistory")}</h2>
+            <h2 className="section-title">{t("history.noHistory")}</h2>
             <p className="mt-2 text-slate-500">{t("history.noHistoryHint")}</p>
           </div>
         )}

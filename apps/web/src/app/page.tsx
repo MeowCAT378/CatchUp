@@ -15,7 +15,7 @@ export default function Home() {
       <div className="page-content flex min-h-screen max-w-5xl items-center">
         <section className="w-full py-10 sm:py-16">
           <Logo className="h-28 w-auto sm:h-36" />
-          <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-tight text-[#1d1d1f] sm:text-7xl">
+          <h1 className="mt-5 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.035em] text-[#1d1d1f] sm:text-7xl">
             {t("room.landingTitle")}
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-neutral-500">

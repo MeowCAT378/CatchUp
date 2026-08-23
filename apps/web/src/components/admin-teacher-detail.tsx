@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
+import { Dialog } from "@/components/dialog";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonActivityCard, SkeletonText } from "@/components/skeleton";
 
@@ -217,7 +218,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
               {teacher.activities.map((activity) => (
                 <article key={activity.id} className="px-1 py-5">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-xl font-bold">{activity.title}</h3>
+                    <h3 className="text-xl font-semibold">{activity.title}</h3>
                     <ActivityTypeBadge type={activity.type} />
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
@@ -267,14 +268,12 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
           )}
         </section>
         {confirming && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="status-title"
-            className="fixed inset-0 z-30 grid place-items-center bg-slate-950/40 p-4"
+          <Dialog
+            labelledBy="status-title"
+            onClose={() => setConfirming(false)}
           >
-            <div className="panel max-w-md">
-              <h2 id="status-title" className="text-xl font-bold">
+            <div className="panel">
+              <h2 id="status-title" className="section-title">
                 {t(
                   teacher.isDisabled
                     ? "admin.enableTitle"
@@ -290,6 +289,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
               <div className="mt-5 flex justify-end gap-3">
                 <button
                   disabled={busy}
+                  autoFocus
                   onClick={() => setConfirming(false)}
                   className="btn-secondary"
                 >
@@ -308,7 +308,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
                 </button>
               </div>
             </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </main>

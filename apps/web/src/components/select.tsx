@@ -174,11 +174,13 @@ export function Select({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listboxId : undefined}
-        aria-labelledby={labelId}
+        aria-labelledby={labelId ? `${labelId} ${id}-value` : undefined}
         onClick={() => (open ? close() : openMenu())}
         className={`form-input mt-0 flex h-11 min-h-0 items-center justify-between gap-3 text-left ${invalid ? "border-red-500 focus:border-red-600 focus:ring-red-600/10" : ""} ${disabled ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500" : ""}`}
       >
-        <span className="truncate">{selectedOption?.label}</span>
+        <span id={`${id}-value`} className="truncate">
+          {selectedOption?.label}
+        </span>
         <ChevronDownIcon
           className={`size-4 shrink-0 text-slate-600 transition-transform duration-150 motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
           aria-hidden="true"

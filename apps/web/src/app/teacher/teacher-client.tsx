@@ -14,6 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
+import { Dialog } from "@/components/dialog";
 import { SkeletonActivityCard } from "@/components/skeleton";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 type Quiz = {
@@ -269,7 +270,7 @@ export default function TeacherClient({ token }: { token: string }) {
                     type="button"
                     disabled={busy || Boolean(deletingId)}
                     onClick={() => setConfirming(quiz)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-danger-ghost"
                   >
                     <TrashIcon className="h-5 w-5" aria-hidden="true" />
                     {t("common.delete")}
@@ -284,17 +285,15 @@ export default function TeacherClient({ token }: { token: string }) {
           )}
         </ul>
         {confirming && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-activity-title"
-            aria-describedby="delete-activity-message"
-            className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"
+          <Dialog
+            labelledBy="delete-activity-title"
+            describedBy="delete-activity-message"
+            onClose={() => setConfirming(undefined)}
           >
-            <div className="panel max-w-md">
+            <div className="panel">
               <h2
                 id="delete-activity-title"
-                className="text-xl font-bold text-slate-900"
+                className="section-title"
               >
                 {t("teacher.deleteActivityTitle")}
               </h2>
@@ -304,6 +303,7 @@ export default function TeacherClient({ token }: { token: string }) {
               <div className="mt-5 flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
+                  autoFocus
                   disabled={Boolean(deletingId)}
                   onClick={() => setConfirming(undefined)}
                   className="btn-secondary"
@@ -323,7 +323,7 @@ export default function TeacherClient({ token }: { token: string }) {
                 </button>
               </div>
             </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </main>

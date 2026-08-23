@@ -372,7 +372,7 @@ export default function Play({
         state.phase === "COMPLETED" &&
         state.activityType === "WORD_CLOUD" ? (
           <section className="panel mt-6">
-            <h1 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">
+            <h1 className="text-center text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
               {t("wordCloud.results")}
             </h1>
             <p className="mt-3 text-center text-lg font-semibold text-slate-700">
@@ -390,7 +390,7 @@ export default function Play({
         ) : (state?.phase === "REVEALED" || state?.phase === "COMPLETED") &&
           state.activityType === "POLL" ? (
           <section className="panel mt-6">
-            <h1 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">
+            <h1 className="text-center text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
               {t("player.pollResults")}
             </h1>
             {pollResult ? (
@@ -551,7 +551,7 @@ export default function Play({
                                 entryId: entry.id,
                               })
                             }
-                            className={`min-h-11 max-w-full rounded-lg border px-4 py-2.5 text-left text-lg font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60 ${entry.voted ? "border-red-300 bg-red-50 text-red-900" : "border-cyan-100 bg-white text-slate-900 hover:border-red-200 hover:bg-red-50/60"}`}
+                            className={`min-h-11 max-w-full rounded-lg border px-4 py-2.5 text-left text-lg font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60 ${entry.voted ? "border-red-300 bg-red-50 text-red-900" : "border-cyan-100 bg-white text-slate-900 hover:border-red-200 hover:bg-red-50/60 hover:text-red-900"}`}
                           >
                             <span className="break-words">{entry.text}</span>
                           </button>

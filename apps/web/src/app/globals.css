@@ -20,6 +20,9 @@ html[lang="th"] {
 }
 
 @layer base {
+  html {
+    scrollbar-color: #94a3b8 #e2e8f0;
+  }
   body {
     @apply min-h-screen bg-[#f4f7f8] font-sans text-[#1d1d1f] antialiased;
   }
@@ -28,12 +31,12 @@ html[lang="th"] {
   input,
   select,
   textarea {
-    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700;
   }
   input,
   select,
   textarea {
-    @apply bg-white text-[#1d1d1f] placeholder:text-neutral-400;
+    @apply bg-white text-[#1d1d1f] caret-sky-700 placeholder:text-slate-500;
   }
   ::selection {
     background: #bae6fd;
@@ -115,29 +118,35 @@ html[lang="th"] {
   .panel {
     @apply rounded-xl border border-neutral-200/90 bg-white/85 p-5 shadow-sm sm:p-6;
   }
+  .panel label:not(.sr-only) {
+    @apply text-sm font-medium text-slate-800;
+  }
   .soft-card {
-    @apply rounded-xl border border-neutral-200/90 bg-white/80 p-4 transition-colors duration-150 hover:border-sky-300 hover:bg-white;
+    @apply rounded-xl border border-neutral-200/90 bg-white/80 p-4;
   }
   .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-sky-800 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
   }
   .btn-secondary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#1d1d1f] transition-colors duration-150 hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#1d1d1f] transition duration-150 ease-out hover:-translate-y-0.5 hover:border-neutral-300 hover:bg-neutral-50 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
   }
   .back-button {
-    @apply inline-flex min-h-11 self-start items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-[#1d1d1f] transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 self-start items-center gap-1.5 whitespace-nowrap rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-[#1d1d1f] transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-neutral-50 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
   }
   .form-input {
-    @apply mt-1 min-h-11 w-full rounded-lg border border-neutral-300 px-3 py-2.5 shadow-sm outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10;
+    @apply mt-1 min-h-11 w-full rounded-lg border border-neutral-300 px-3 py-2.5 shadow-sm outline-none transition duration-150 hover:border-neutral-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none;
   }
   .alert-error {
     @apply rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800;
   }
   .badge {
-    @apply inline-flex items-center rounded-md bg-neutral-100 px-2.5 py-1 text-sm font-medium;
+    @apply inline-flex items-center whitespace-nowrap rounded-md bg-neutral-100 px-2.5 py-1 text-sm font-medium;
   }
   .btn-danger {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-red-800 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
+  }
+  .btn-danger-ghost {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold text-red-700 transition-colors duration-150 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
   }
   .page-title {
     @apply text-3xl font-semibold tracking-tight text-[#1d1d1f] sm:text-4xl;
@@ -164,7 +173,7 @@ html[lang="th"] {
     @apply px-4 py-3 align-middle;
   }
   .data-table tbody tr {
-    @apply border-t border-neutral-200/80;
+    @apply border-t border-neutral-200/80 transition-colors duration-150 hover:bg-sky-50/40 motion-reduce:transition-none;
   }
   .empty-state {
     @apply mt-6 rounded-xl border border-dashed border-neutral-300 bg-white/60 px-5 py-10 text-center text-neutral-600;
@@ -199,8 +208,18 @@ html[lang="th"] {
   .select-option-selected {
     @apply bg-sky-50 font-medium text-sky-800;
   }
+  .dialog-surface {
+    @apply m-auto max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] overflow-y-auto border-0 bg-transparent p-0;
+    animation: dialog-enter 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dialog-surface::backdrop {
+    background: rgba(15, 23, 42, 0.42);
+    animation: dialog-backdrop-enter 180ms ease-out;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .select-content {
+    .select-content,
+    .dialog-surface,
+    .dialog-surface::backdrop {
       animation: none;
     }
   }
@@ -210,5 +229,18 @@ html[lang="th"] {
   from {
     opacity: 0;
     transform: translateY(-2px);
+  }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes dialog-backdrop-enter {
+  from {
+    background: rgba(15, 23, 42, 0);
   }
 }

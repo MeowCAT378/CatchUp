@@ -91,7 +91,7 @@ export function AdminTeachers() {
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="block text-xs font-medium" aria-hidden="true">&nbsp;</span>
-            <button className="btn-primary h-11 min-h-0 w-full">{t("admin.search")}</button>
+            <button type="submit" className="btn-primary h-11 min-h-0 w-full">{t("admin.search")}</button>
           </div>
         </form>
         {error && (
@@ -103,7 +103,7 @@ export function AdminTeachers() {
           <div aria-busy="true"><SkeletonTable columns={7} /></div>
         ) : result?.items.length ? (
           <div className="table-surface">
-            <table className="data-table">
+            <table className="data-table min-w-[36rem] sm:min-w-0">
               <thead>
                 <tr>
                   <th>{t("common.name")}</th>

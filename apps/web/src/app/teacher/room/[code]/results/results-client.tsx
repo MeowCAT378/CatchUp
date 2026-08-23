@@ -180,7 +180,7 @@ export default function ResultsClient({
       <div className="page-content max-w-6xl">
         <BackButton href={backHref ?? `/teacher/room/${code}`} />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold">
+          <h1 className="page-title">
             {results.room.quizTitle} {t("results.results")}
           </h1>
           <span className="flex gap-2">
@@ -257,7 +257,7 @@ export default function ResultsClient({
                 key={question.id}
                 className="mt-4 border-t border-neutral-200 pt-5"
               >
-                <h3 className="font-bold">
+                <h3 className="font-semibold">
                   {t("results.questionNumber", { number: index + 1 })}:{" "}
                   {question.text}
                 </h3>
@@ -301,7 +301,7 @@ export default function ResultsClient({
                             <span
                               className={
                                 choice.isCorrect
-                                  ? "font-bold text-emerald-700"
+                                  ? "font-semibold text-emerald-700"
                                   : ""
                               }
                             >
@@ -329,7 +329,7 @@ export default function ResultsClient({
         {results.responses.length > 0 && (
           <section className="mt-8 overflow-x-auto">
             <h2 className="section-title">{t("history.responses")}</h2>
-            <table className="data-table mt-3 border-y border-neutral-200 bg-white/75">
+            <table className="data-table mt-3 min-w-[36rem] border-y border-neutral-200 bg-white/75">
               <thead>
                 <tr className="border-b">
                   <th>{t("results.participant")}</th>
@@ -367,7 +367,7 @@ export default function ResultsClient({
             {t("results.participantResults")}
           </h2>
           {results.participants.length ? (
-            <table className="data-table mt-3 border-y border-neutral-200 bg-white/75">
+            <table className="data-table mt-3 min-w-[36rem] border-y border-neutral-200 bg-white/75">
               <thead>
                 <tr className="border-b">
                   <th>{t("results.rank")}</th>

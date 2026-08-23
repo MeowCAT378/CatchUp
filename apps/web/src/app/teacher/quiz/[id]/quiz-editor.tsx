@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
+import { Dialog } from "@/components/dialog";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { SkeletonText } from "@/components/skeleton";
 
@@ -354,7 +355,7 @@ export default function QuizEditor({
                         type="button"
                         disabled={Boolean(deleting)}
                         onClick={() => setConfirming(question.id)}
-                        className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 py-1 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        className="btn-danger-ghost"
                       >
                         <TrashIcon className="h-5 w-5" aria-hidden="true" />
                         {t("quiz.deleteQuestion")}
@@ -392,21 +393,23 @@ export default function QuizEditor({
           </ol>
         )}
         {confirming && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="fixed inset-0 z-20 grid place-items-center bg-slate-900/30 p-4"
+          <Dialog
+            labelledBy="delete-question-title"
+            describedBy="delete-question-message"
+            onClose={() => setConfirming(undefined)}
+            className="max-w-sm"
           >
-            <div className="panel max-w-sm">
-              <p className="font-semibold text-slate-900">
+            <div className="panel">
+              <h2 id="delete-question-title" className="section-title">
                 {t("teacher.deleteQuestionConfirm")}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
+              </h2>
+              <p id="delete-question-message" className="mt-2 text-sm text-slate-600">
                 {t("teacher.deleteQuestionWarning")}
               </p>
               <div className="mt-5 flex justify-end gap-3">
                 <button
                   type="button"
+                  autoFocus
                   onClick={() => setConfirming(undefined)}
                   className="btn-secondary"
                 >
@@ -425,7 +428,7 @@ export default function QuizEditor({
                 </button>
               </div>
             </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </main>

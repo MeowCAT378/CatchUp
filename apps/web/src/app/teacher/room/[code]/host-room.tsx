@@ -12,6 +12,7 @@ import {
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
+import { Dialog } from "@/components/dialog";
 import { api, apiErrorCode, type ApiErrorCode } from "@/lib/api";
 import { RoomEvents, roomSocket } from "@/lib/room-socket";
 import {
@@ -184,7 +185,7 @@ export default function HostRoom({
             ) : (
               <Skeleton className="mx-auto h-48 w-48 bg-slate-200 lg:h-64 lg:w-64" />
             )}
-            <p className="mt-2 text-center font-bold">
+            <p className="mt-2 text-center font-semibold">
               {t("room.qrJoin")}: {code}
             </p>
           </div>
@@ -287,7 +288,7 @@ export default function HostRoom({
         </section>
         {data?.state.activityType === "WORD_CLOUD" && phase === "COMPLETED" ? (
           <section className="panel mt-6">
-            <h2 className="text-center text-3xl font-black text-slate-900 sm:text-5xl">
+            <h2 className="text-center text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
               {t("wordCloud.results")}
             </h2>
             <p className="mt-3 text-center text-lg font-semibold text-slate-700">
@@ -311,7 +312,7 @@ export default function HostRoom({
             phase === "COMPLETED") && (
             <section className="mt-6 grid gap-6 md:grid-cols-2">
               <div className="panel">
-                <h2 className="text-xl font-bold">{t("room.distribution")}</h2>
+                <h2 className="section-title">{t("room.distribution")}</h2>
                 {data?.state.activityType === "WORD_CLOUD" ? (
                   <div className="mt-3 flex flex-wrap gap-3">
                     {data.entries.map((entry) => {
@@ -326,7 +327,7 @@ export default function HostRoom({
                           style={{
                             fontSize: `clamp(18px, ${size / 10}vw, ${size}px)`,
                           }}
-                          className="max-w-full break-words rounded-xl bg-sky-50 px-3 py-2 font-bold"
+                          className="max-w-full break-words rounded-xl bg-sky-50 px-3 py-2 font-semibold"
                         >
                           {entry.text} {entry.votes}
                         </span>
@@ -339,7 +340,7 @@ export default function HostRoom({
                       key={x.id}
                       className={
                         x.isCorrect
-                          ? "mt-3 rounded-xl bg-emerald-50 p-3 font-bold text-emerald-800"
+                          ? "mt-3 rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-800"
                           : "mt-3 rounded-xl bg-sky-50 p-3"
                       }
                     >
@@ -352,7 +353,7 @@ export default function HostRoom({
               </div>
               {data?.state.activityType === "QUIZ" && (
                 <div className="panel">
-                  <h2 className="text-xl font-bold">{t("room.leaderboard")}</h2>
+                  <h2 className="section-title">{t("room.leaderboard")}</h2>
                   {data?.leaderboard.map((x) => (
                     <p
                       key={`${x.rank}-${x.displayName}`}
@@ -367,23 +368,19 @@ export default function HostRoom({
           )
         )}
         {confirmComplete && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="complete-room-title"
-            className="fixed inset-0 z-40 grid place-items-center bg-slate-900/40 p-4"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setConfirmComplete(false);
-            }}
+          <Dialog
+            labelledBy="complete-room-title"
+            describedBy="complete-room-message"
+            onClose={() => setConfirmComplete(false)}
           >
-            <div className="panel max-w-md">
+            <div className="panel">
               <h2
                 id="complete-room-title"
-                className="text-xl font-bold text-slate-900"
+                className="section-title"
               >
                 {t("room.completeConfirmTitle")}
               </h2>
-              <p className="mt-2 text-slate-600">
+              <p id="complete-room-message" className="mt-2 text-slate-600">
                 {t("room.completeConfirmMessage")}
               </p>
               <div className="mt-5 flex justify-end gap-3">
@@ -401,14 +398,14 @@ export default function HostRoom({
                     setConfirmComplete(false);
                     emit(RoomEvents.quizComplete);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-700 px-5 py-2.5 font-semibold text-white hover:bg-red-800"
+                  className="btn-danger"
                 >
                   <StopIcon className="h-5 w-5" aria-hidden="true" />
                   {t("room.complete")}
                 </button>
               </div>
             </div>
-          </div>
+          </Dialog>
         )}
       </div>
     </main>

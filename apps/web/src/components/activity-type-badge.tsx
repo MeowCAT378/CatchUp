@@ -20,7 +20,7 @@ export function ActivityTypeBadge({ type }: { type: ActivityType }) {
   const [Icon, className] = styles[type];
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ${className}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium ${className}`}
     >
       <Icon className="h-4 w-4" aria-hidden="true" />
       {t(`activity.${type}.name`)}

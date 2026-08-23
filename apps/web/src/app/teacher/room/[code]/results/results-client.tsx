@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowDownTrayIcon,
   ArrowPathIcon,
-  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { BackButton } from "@/components/back-button";
 import { SkeletonResults } from "@/components/skeleton";
@@ -182,10 +181,6 @@ export default function ResultsClient({
         <BackButton href={backHref ?? `/teacher/room/${code}`} />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-bold">
-            <ChartBarIcon
-              className="mr-2 inline h-6 w-6 text-sky-700"
-              aria-hidden="true"
-            />
             {results.room.quizTitle} {t("results.results")}
           </h1>
           <span className="flex gap-2">
@@ -202,7 +197,7 @@ export default function ResultsClient({
             <button
               disabled={!!downloading}
               onClick={() => void download("xlsx")}
-              className="btn-primary"
+              className="btn-secondary"
             >
               <ArrowDownTrayIcon className="h-5 w-5" aria-hidden="true" />
               {downloading === "xlsx"
@@ -216,16 +211,16 @@ export default function ResultsClient({
             {t(`errors.${errorCode}`)}
           </p>
         )}
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid divide-y divide-neutral-200 border-y border-neutral-200 bg-white/55 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
           {cards.map(([label, value]) => (
-            <div key={String(label)} className="soft-card">
+            <div key={String(label)} className="px-4 py-3">
               <p className="text-sm text-slate-500">{label}</p>
-              <p className="mt-1 text-2xl font-bold">{value}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
             </div>
           ))}
         </div>
         {sessionId && (
-          <dl className="panel mt-6 grid gap-4 sm:grid-cols-3">
+          <dl className="mt-6 grid gap-4 border-y border-neutral-200 bg-white/55 px-1 py-4 sm:grid-cols-3">
             <div>
               <dt className="text-sm text-slate-500">{t("history.teacher")}</dt>
               <dd className="font-semibold">
@@ -252,15 +247,15 @@ export default function ResultsClient({
             </div>
           </dl>
         )}
-        <section className="panel mt-8">
-          <h2 className="text-xl font-bold">
+        <section className="mt-8">
+          <h2 className="section-title">
             {t("results.questionAnalytics")}
           </h2>
           {results.questions.length ? (
             results.questions.map((question, index) => (
               <article
                 key={question.id}
-                className="mt-4 rounded-xl border border-sky-100 p-5"
+                className="mt-4 border-t border-neutral-200 pt-5"
               >
                 <h3 className="font-bold">
                   {t("results.questionNumber", { number: index + 1 })}:{" "}
@@ -332,9 +327,9 @@ export default function ResultsClient({
           )}
         </section>
         {results.responses.length > 0 && (
-          <section className="panel mt-8 overflow-x-auto">
-            <h2 className="text-xl font-bold">{t("history.responses")}</h2>
-            <table className="mt-3 min-w-full text-left">
+          <section className="mt-8 overflow-x-auto">
+            <h2 className="section-title">{t("history.responses")}</h2>
+            <table className="data-table mt-3 border-y border-neutral-200 bg-white/75">
               <thead>
                 <tr className="border-b">
                   <th>{t("results.participant")}</th>
@@ -367,12 +362,12 @@ export default function ResultsClient({
             </table>
           </section>
         )}
-        <section className="panel mt-8 overflow-x-auto">
-          <h2 className="text-xl font-bold">
+        <section className="mt-8 overflow-x-auto">
+          <h2 className="section-title">
             {t("results.participantResults")}
           </h2>
           {results.participants.length ? (
-            <table className="mt-3 min-w-full text-left">
+            <table className="data-table mt-3 border-y border-neutral-200 bg-white/75">
               <thead>
                 <tr className="border-b">
                   <th>{t("results.rank")}</th>

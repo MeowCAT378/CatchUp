@@ -35,22 +35,25 @@ export function AdminOverview() {
   return (
     <main className="page-shell">
       <div className="page-content">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-800">
-          {t("admin.navigation")}
-        </p>
-        <h1 className="mt-2 text-4xl font-bold">{t("admin.overview")}</h1>
+        <h1 className="page-title">{t("admin.overview")}</h1>
         {error && (
           <p role="alert" className="alert-error mt-5">
             {t(`errors.${error}`)}
           </p>
         )}
-        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy={!data}>
+        <div
+          className="mt-7 grid divide-y divide-neutral-200 border-y border-neutral-200 bg-white/55 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3"
+          aria-busy={!data}
+        >
           {!data && !error ? Array.from({ length: 6 }, (_, index) => <SkeletonStatCard key={index} />) : data && cards.map(([label, value]) => (
-            <div key={label} className="panel"><p className="text-sm text-slate-500">{t(label)}</p><p className="mt-2 text-4xl font-bold">{value}</p></div>
+            <div key={label} className="px-5 py-4">
+              <p className="text-sm text-slate-500">{t(label)}</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
+            </div>
           ))}
         </div>
         <div className="mt-7 flex gap-3">
-          <Link href="/admin/teachers" className="btn-primary">
+          <Link href="/admin/teachers" className="btn-secondary">
             {t("admin.teachers")}
           </Link>
           <Link href="/admin/history" className="btn-secondary">

@@ -126,12 +126,12 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
         </Link>
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold">
+            <h1 className="page-title">
               {teacher.name ?? teacher.email}
             </h1>
             <p className="mt-1 text-slate-500">{teacher.id}</p>
           </div>
-          <span className="badge">
+          <span className={`badge ${teacher.isDisabled ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>
             {t(teacher.isDisabled ? "admin.disabled" : "admin.active")}
           </span>
         </div>
@@ -142,14 +142,14 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
         )}
         {message && (
           <p
-            className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-800"
+            className="mt-5 rounded-lg bg-emerald-50 px-4 py-3 text-emerald-800"
             role="status"
           >
             {message}
           </p>
         )}
         <section className="panel mt-6">
-          <h2 className="text-2xl font-bold">{t("admin.editTeacher")}</h2>
+          <h2 className="section-title">{t("admin.editTeacher")}</h2>
           <form onSubmit={save} className="mt-4 grid gap-4 sm:grid-cols-2">
             <label>
               {t("common.name")}
@@ -182,7 +182,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
                 className={
                   teacher.isDisabled
                     ? "btn-secondary"
-                    : "inline-flex min-h-11 items-center rounded-full bg-red-600 px-5 font-semibold text-white disabled:opacity-50"
+                    : "btn-danger"
                 }
               >
                 {t(teacher.isDisabled ? "admin.enable" : "admin.disable")}
@@ -211,11 +211,11 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
           </dl>
         </section>
         <section className="mt-7">
-          <h2 className="text-2xl font-bold">{t("admin.activities")}</h2>
+          <h2 className="section-title">{t("admin.activities")}</h2>
           {teacher.activities.length ? (
-            <div className="mt-4 grid gap-4">
+            <div className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200 bg-white/55">
               {teacher.activities.map((activity) => (
-                <article key={activity.id} className="panel">
+                <article key={activity.id} className="px-1 py-5">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-xl font-bold">{activity.title}</h3>
                     <ActivityTypeBadge type={activity.type} />
@@ -233,7 +233,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
                   {activity.questions.map((question) => (
                     <div
                       key={question.id}
-                      className="mt-4 rounded-2xl border border-sky-100 p-4"
+                      className="mt-4 border-t border-neutral-200 pt-4"
                     >
                       <h4 className="font-semibold">
                         {question.position + 1}. {question.text}
@@ -263,7 +263,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
               ))}
             </div>
           ) : (
-            <p className="panel mt-4">{t("admin.noActivities")}</p>
+            <p className="empty-state mt-4">{t("admin.noActivities")}</p>
           )}
         </section>
         {confirming && (
@@ -301,7 +301,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
                   className={
                     teacher.isDisabled
                       ? "btn-primary"
-                      : "inline-flex min-h-11 items-center rounded-full bg-red-600 px-5 font-semibold text-white disabled:opacity-50"
+                      : "btn-danger"
                   }
                 >
                   {t(teacher.isDisabled ? "admin.enable" : "admin.disable")}

@@ -402,7 +402,7 @@ export default function Play({
                   {pollResult.distribution.map((choice) => (
                     <div
                       key={choice.id}
-                      className={`rounded-2xl border p-4 ${choice.id === state.selectedChoiceId ? "border-sky-600 bg-sky-100" : "border-transparent bg-sky-50"}`}
+                      className={`rounded-xl border p-4 ${choice.id === state.selectedChoiceId ? "border-sky-600 bg-sky-100" : "border-transparent bg-sky-50"}`}
                     >
                       <div className="flex justify-between gap-3 font-semibold">
                         <span className="break-words">
@@ -469,7 +469,7 @@ export default function Play({
                           }
                           key={choice.id}
                           onClick={() => answer(choice.id)}
-                          className={`min-h-18 rounded-2xl border p-5 text-left text-lg font-semibold shadow-sm transition duration-200 ${correct ? "border-emerald-400 bg-emerald-50 text-emerald-950" : wrong ? "border-red-400 bg-red-50 text-red-950" : selected ? "border-sky-500 bg-sky-50 text-sky-950" : "border-black/[0.06] bg-white hover:-translate-y-0.5 hover:bg-neutral-50"} disabled:opacity-70`}
+                          className={`min-h-18 rounded-xl border p-5 text-left text-lg font-semibold transition-colors duration-150 ${correct ? "border-emerald-400 bg-emerald-50 text-emerald-950" : wrong ? "border-red-400 bg-red-50 text-red-950" : selected ? "border-sky-500 bg-sky-50 text-sky-950" : "border-neutral-200 bg-white hover:border-sky-300 hover:bg-sky-50/50"} disabled:opacity-70`}
                         >
                           <span className="break-words">{choice.text}</span>
                           {correct && (
@@ -536,7 +536,7 @@ export default function Play({
                         entry.isOwn ? (
                           <span
                             key={entry.id}
-                            className="inline-flex min-h-11 max-w-full items-center rounded-2xl border border-cyan-100 bg-white/70 px-4 py-2.5 text-lg font-bold text-slate-900 shadow-sm backdrop-blur-sm"
+                            className="inline-flex min-h-11 max-w-full items-center rounded-lg border border-cyan-100 bg-white px-4 py-2.5 text-lg font-semibold text-slate-900"
                           >
                             <span className="break-words">{entry.text}</span>
                           </span>
@@ -551,7 +551,7 @@ export default function Play({
                                 entryId: entry.id,
                               })
                             }
-                            className={`min-h-11 max-w-full rounded-2xl border px-4 py-2.5 text-left text-lg font-bold shadow-sm transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60 ${entry.voted ? "border-red-300 bg-red-50 text-red-900" : "border-cyan-100 bg-white/70 text-slate-900 hover:border-red-200 hover:bg-red-50/60"}`}
+                            className={`min-h-11 max-w-full rounded-lg border px-4 py-2.5 text-left text-lg font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60 ${entry.voted ? "border-red-300 bg-red-50 text-red-900" : "border-cyan-100 bg-white text-slate-900 hover:border-red-200 hover:bg-red-50/60"}`}
                           >
                             <span className="break-words">{entry.text}</span>
                           </button>
@@ -561,7 +561,7 @@ export default function Play({
                     {state.wordSubmitted && (
                       <p
                         role="status"
-                        className="mt-5 rounded-2xl bg-teal-50/80 px-4 py-3 text-sm font-medium text-teal-800"
+                        className="mt-5 rounded-lg bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800"
                       >
                         <CheckIcon
                           className="mr-1 inline h-5 w-5"
@@ -577,7 +577,7 @@ export default function Play({
                 state.answerSubmitted && (
                   <p
                     role="status"
-                    className="mt-5 rounded-2xl bg-neutral-100 p-4 font-semibold text-[#1d1d1f]"
+                    className="mt-5 rounded-lg bg-neutral-100 p-4 font-semibold text-[#1d1d1f]"
                   >
                     <CheckIcon
                       className="mr-1 inline h-5 w-5"
@@ -589,7 +589,7 @@ export default function Play({
               {state.activityType === "QUIZ" && state.phase === "REVEALED" && (
                 <p
                   role="status"
-                  className={`mt-5 rounded-2xl p-4 font-semibold ${!state.selectedChoiceId ? "bg-neutral-100 text-neutral-800" : state.selectedChoiceId === state.correctChoiceId ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}
+                  className={`mt-5 rounded-lg p-4 font-semibold ${!state.selectedChoiceId ? "bg-neutral-100 text-neutral-800" : state.selectedChoiceId === state.correctChoiceId ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}
                 >
                   {!state.selectedChoiceId
                     ? t("player.noAnswer")
@@ -624,7 +624,7 @@ export default function Play({
                 <li
                   key={`${entry.rank}-${entry.displayName}`}
                   aria-current={entry.isYou ? "true" : undefined}
-                  className={`rounded-2xl p-4 font-semibold ${entry.isYou ? "border-2 border-sky-600 bg-sky-50" : "bg-neutral-100"}`}
+                  className={`rounded-lg p-4 font-semibold ${entry.isYou ? "border-2 border-sky-600 bg-sky-50" : "bg-neutral-100"}`}
                 >
                   {entry.rank}. {entry.displayName}: {entry.score}
                   {entry.isYou && (

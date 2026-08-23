@@ -63,8 +63,11 @@ export function AdminTeachers() {
   return (
     <main className="page-shell">
       <div className="page-content max-w-7xl">
-        <h1 className="text-4xl font-bold">{t("admin.teachers")}</h1>
-        <form onSubmit={submit} className="panel mt-6 flex flex-wrap gap-3">
+        <h1 className="page-title">{t("admin.teachers")}</h1>
+        <form
+          onSubmit={submit}
+          className="filter-bar grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+        >
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -94,33 +97,33 @@ export function AdminTeachers() {
         {loading && !result ? (
           <div aria-busy="true"><SkeletonTable columns={7} /></div>
         ) : result?.items.length ? (
-          <div className="panel mt-6 overflow-x-auto">
-            <table className="min-w-full text-left">
+          <div className="table-surface">
+            <table className="data-table">
               <thead>
-                <tr className="border-b">
-                  <th className="p-3">{t("common.name")}</th>
-                  <th className="p-3">{t("admin.status")}</th>
-                  <th className="p-3">{t("admin.activities")}</th>
-                  <th className="p-3">{t("admin.sessions")}</th>
-                  <th className="p-3">{t("admin.dates")}</th>
-                  <th className="p-3">{t("admin.lastActivity")}</th>
-                  <th className="p-3">
+                <tr>
+                  <th>{t("common.name")}</th>
+                  <th>{t("admin.status")}</th>
+                  <th className="hidden sm:table-cell">{t("admin.activities")}</th>
+                  <th className="hidden sm:table-cell">{t("admin.sessions")}</th>
+                  <th className="hidden lg:table-cell">{t("admin.dates")}</th>
+                  <th className="hidden lg:table-cell">{t("admin.lastActivity")}</th>
+                  <th>
                     <span className="sr-only">{t("admin.teacherDetails")}</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {result.items.map((teacher) => (
-                  <tr key={teacher.id} className="border-b border-slate-200/70">
-                    <td className="p-3">
+                  <tr key={teacher.id}>
+                    <td>
                       <strong>{teacher.name ?? "—"}</strong>
-                      <div className="text-sm text-slate-500">
+                      <div className="break-all text-sm text-slate-500">
                         {teacher.email}
                       </div>
-                      <div className="text-xs text-slate-400">{teacher.id}</div>
+                      <div className="hidden text-xs text-slate-400 sm:block">{teacher.id}</div>
                     </td>
-                    <td className="p-3">
-                      <span className="badge">
+                    <td>
+                      <span className={`badge ${teacher.isDisabled ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>
                         {t(
                           teacher.isDisabled
                             ? "admin.disabled"
@@ -128,17 +131,17 @@ export function AdminTeachers() {
                         )}
                       </span>
                     </td>
-                    <td className="p-3">{teacher.activityCount}</td>
-                    <td className="p-3">{teacher.sessionCount}</td>
-                    <td className="p-3 text-sm">
+                    <td className="hidden tabular-nums sm:table-cell">{teacher.activityCount}</td>
+                    <td className="hidden tabular-nums sm:table-cell">{teacher.sessionCount}</td>
+                    <td className="hidden text-sm lg:table-cell">
                       {date(teacher.createdAt)}
                       <br />
                       {date(teacher.updatedAt)}
                     </td>
-                    <td className="p-3">{date(teacher.lastActivityAt)}</td>
-                    <td className="p-3">
+                    <td className="hidden lg:table-cell">{date(teacher.lastActivityAt)}</td>
+                    <td>
                       <a
-                        className="btn-secondary"
+                        className="btn-secondary px-3"
                         href={`/admin/teachers/${teacher.id}`}
                       >
                         {t("admin.teacherDetails")}
@@ -150,7 +153,7 @@ export function AdminTeachers() {
             </table>
           </div>
         ) : (
-          <p className="panel mt-6 text-center">{t("admin.noTeachers")}</p>
+          <p className="empty-state">{t("admin.noTeachers")}</p>
         )}
         {result && result.totalPages > 1 && (
           <nav className="mt-5 flex items-center justify-center gap-3">

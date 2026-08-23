@@ -3,14 +3,16 @@
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { Logo } from "@/components/logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function TeacherHeader() {
   const { t } = useTranslation();
+  const pathname = usePathname();
   return (
-    <header className="fixed left-0 right-0 top-0 z-20 border-b border-black/[0.05] bg-white/80 px-5 py-3 backdrop-blur-xl sm:px-8">
+    <header className="fixed left-0 right-0 top-0 z-20 border-b border-neutral-200 bg-white/95 px-5 py-3 backdrop-blur-md sm:px-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <a
           href="/teacher"
@@ -20,7 +22,10 @@ export function TeacherHeader() {
           <Logo className="h-12 w-auto sm:h-14" />
         </a>
         <div className="flex items-center gap-2">
-          <Link href="/teacher/history" className="btn-secondary px-4">
+          <Link
+            href="/teacher/history"
+            className={`min-h-11 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${pathname.startsWith("/teacher/history") ? "bg-sky-50 text-sky-800" : "hover:bg-neutral-100"}`}
+          >
             {t("history.title")}
           </Link>
           <LanguageSwitcher />
@@ -28,7 +33,7 @@ export function TeacherHeader() {
             type="button"
             aria-label={t("teacher.logout")}
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="btn-secondary px-3 py-1.5 text-xs sm:px-4"
+            className="min-h-11 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-neutral-100"
           >
             <ArrowRightStartOnRectangleIcon
               className="h-5 w-5"

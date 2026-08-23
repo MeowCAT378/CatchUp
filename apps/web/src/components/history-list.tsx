@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
+import { DateFilterPicker } from "@/components/date-filter-picker";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonTable } from "@/components/skeleton";
 
@@ -49,6 +50,8 @@ export function HistoryList({
   const [page, setPage] = useState(1);
   const [loadedQuery, setLoadedQuery] = useState("");
   const [errorCode, setErrorCode] = useState<ApiErrorCode | "">("");
+  const filterControlClassName = "form-input mt-0 h-11 min-h-0";
+  const dateRangeInvalid = Boolean(from && to && from > to);
   const query = useMemo(() => {
     const value = new URLSearchParams({ page: String(page) });
     if (search) value.set("search", search);
@@ -85,6 +88,7 @@ export function HistoryList({
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    if (dateRangeInvalid) return;
     setPage(1);
     setSearch(searchInput.trim());
   }
@@ -102,92 +106,53 @@ export function HistoryList({
   return (
     <main className="page-shell">
       <div className="page-content max-w-7xl">
-        <h1 className="text-4xl font-bold">{t("history.title")}</h1>
+        <h1 className="page-title">{t("history.title")}</h1>
         <form
           onSubmit={submit}
-          className="panel mt-6 grid gap-3 md:grid-cols-3 lg:grid-cols-6"
+          className="filter-bar grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(220px,1.5fr)_repeat(5,minmax(0,1fr))_auto]"
         >
-          <label className="md:col-span-2">
-            <span className="sr-only">{t("history.search")}</span>
+          <label>
+            <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.searchLabel")}</span>
             <input
+              id="history-search"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder={t("history.search")}
-              className="form-input mt-0"
+              className={filterControlClassName}
             />
           </label>
-          <select
-            aria-label={t("history.allTypes")}
-            value={activityType}
-            onChange={(event) => {
-              setPage(1);
-              setActivityType(event.target.value);
-            }}
-            className="form-input mt-0"
-          >
-            <option value="">{t("history.allTypes")}</option>
-            <option value="QUIZ">{t("activity.QUIZ.name")}</option>
-            <option value="POLL">{t("activity.POLL.name")}</option>
-            <option value="WORD_CLOUD">{t("activity.WORD_CLOUD.name")}</option>
-          </select>
-          <select
-            aria-label={t("history.allStatuses")}
-            value={status}
-            onChange={(event) => {
-              setPage(1);
-              setStatus(event.target.value);
-            }}
-            className="form-input mt-0"
-          >
-            <option value="">{t("history.allStatuses")}</option>
-            <option value="LOBBY">{t("history.lobby")}</option>
-            <option value="ACTIVE">{t("history.active")}</option>
-            <option value="FINISHED">{t("history.finished")}</option>
-          </select>
-          {admin && (
-            <select
-              aria-label={t("history.teacher")}
-              value={teacherId}
-              onChange={(event) => {
-                setPage(1);
-                setTeacherId(event.target.value);
-              }}
-              className="form-input mt-0"
-            >
-              <option value="">{t("admin.teachers")}</option>
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.name ?? teacher.email}
-                </option>
-              ))}
+          <label>
+            <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.activityType")}</span>
+            <select id="history-activity-type" value={activityType} onChange={(event) => { setPage(1); setActivityType(event.target.value); }} className={filterControlClassName}>
+              <option value="">{t("history.allTypes")}</option>
+              <option value="QUIZ">{t("activity.QUIZ.name")}</option>
+              <option value="POLL">{t("activity.POLL.name")}</option>
+              <option value="WORD_CLOUD">{t("activity.WORD_CLOUD.name")}</option>
             </select>
+          </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.status")}</span>
+            <select id="history-status" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }} className={filterControlClassName}>
+              <option value="">{t("history.allStatuses")}</option>
+              <option value="LOBBY">{t("history.lobby")}</option>
+              <option value="ACTIVE">{t("history.active")}</option>
+              <option value="FINISHED">{t("history.finished")}</option>
+            </select>
+          </label>
+          {admin && (
+            <label>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">{t("history.teacherFilter")}</span>
+              <select id="history-teacher" value={teacherId} onChange={(event) => { setPage(1); setTeacherId(event.target.value); }} className={filterControlClassName}>
+                <option value="">{t("history.allTeachers")}</option>
+                {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name ?? teacher.email}</option>)}
+              </select>
+            </label>
           )}
-          <button className="btn-primary">{t("history.search")}</button>
-          <label className="text-sm">
-            {t("history.from")}
-            <input
-              type="date"
-              value={from}
-              onChange={(event) => {
-                setPage(1);
-                setFrom(event.target.value);
-              }}
-              className="form-input"
-            />
-          </label>
-          <label className="text-sm">
-            {t("history.to")}
-            <input
-              type="date"
-              value={to}
-              onChange={(event) => {
-                setPage(1);
-                setTo(event.target.value);
-              }}
-              className="form-input"
-            />
-          </label>
+          <DateFilterPicker id="history-from" label={t("history.from")} placeholder={t("history.selectDate")} value={from} onChange={(value) => { setPage(1); setFrom(value); }} locale={i18n.language} clearLabel={t("history.clearDate")} todayLabel={t("history.today")} previousMonthLabel={t("history.previousMonth")} nextMonthLabel={t("history.nextMonth")} max={to} />
+          <DateFilterPicker id="history-to" label={t("history.to")} placeholder={t("history.selectDate")} value={to} onChange={(value) => { setPage(1); setTo(value); }} locale={i18n.language} clearLabel={t("history.clearDate")} todayLabel={t("history.today")} previousMonthLabel={t("history.previousMonth")} nextMonthLabel={t("history.nextMonth")} min={from} />
+          <button className="btn-primary h-11 min-h-0 self-end">{t("history.searchButton")}</button>
         </form>
+        {dateRangeInvalid && <p className="mt-2 text-sm text-red-700" role="alert">{t("history.invalidDateRange")}</p>}
         {errorCode && (
           <p className="alert-error mt-5" role="alert">
             {t(`errors.${errorCode}`)}
@@ -196,48 +161,51 @@ export function HistoryList({
         {loading && !result ? (
           <div aria-busy="true"><SkeletonTable columns={admin ? 7 : 6} /></div>
         ) : result?.items.length ? (
-          <div className="panel mt-6 overflow-x-auto">
-            <table className="min-w-full text-left">
+          <div className="table-surface">
+            <table className="data-table">
               <thead>
-                <tr className="border-b">
-                  <th className="p-3">{t("admin.activities")}</th>
-                  {admin && <th className="p-3">{t("history.teacher")}</th>}
-                  <th className="p-3">{t("history.startedAt")}</th>
-                  <th className="p-3">{t("history.duration")}</th>
-                  <th className="p-3">{t("results.participants")}</th>
-                  <th className="p-3">{t("history.status")}</th>
-                  <th className="p-3">
+                <tr>
+                  <th>{t("admin.activities")}</th>
+                  {admin && <th className="hidden md:table-cell">{t("history.teacher")}</th>}
+                  <th className="hidden sm:table-cell">{t("history.startedAt")}</th>
+                  <th className="hidden lg:table-cell">{t("history.duration")}</th>
+                  <th className="hidden lg:table-cell">{t("results.participants")}</th>
+                  <th>{t("history.status")}</th>
+                  <th>
                     <span className="sr-only">{t("history.viewResults")}</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {result.items.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-200/70">
-                    <td className="p-3">
+                  <tr key={item.id}>
+                    <td>
                       <strong>{item.activityTitle}</strong>
-                      <div className="mt-1">
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
                         <ActivityTypeBadge type={item.activityType} />
+                        <span className="text-xs text-slate-500 sm:hidden">
+                          {date(item.startedAt ?? item.createdAt)}
+                        </span>
                       </div>
                     </td>
                     {admin && (
-                      <td className="p-3">
+                      <td className="hidden md:table-cell">
                         {item.host.name ?? item.host.email}
                       </td>
                     )}
-                    <td className="p-3">
+                    <td className="hidden sm:table-cell">
                       {date(item.startedAt ?? item.createdAt)}
                     </td>
-                    <td className="p-3">{duration(item)}</td>
-                    <td className="p-3">{item.participantCount}</td>
-                    <td className="p-3">
+                    <td className="hidden lg:table-cell">{duration(item)}</td>
+                    <td className="hidden tabular-nums lg:table-cell">{item.participantCount}</td>
+                    <td>
                       <span className="badge">
                         {t(`history.${item.status.toLowerCase()}`)}
                       </span>
                     </td>
-                    <td className="p-3">
+                    <td>
                       <a
-                        className="btn-secondary"
+                        className="btn-secondary px-3"
                         href={`${basePath}/${item.id}`}
                       >
                         {t("history.viewResults")}
@@ -249,7 +217,7 @@ export function HistoryList({
             </table>
           </div>
         ) : (
-          <div className="panel mt-6 text-center">
+          <div className="empty-state">
             <h2 className="text-xl font-bold">{t("history.noHistory")}</h2>
             <p className="mt-2 text-slate-500">{t("history.noHistoryHint")}</p>
           </div>

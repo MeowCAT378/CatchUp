@@ -4,7 +4,7 @@ export function Skeleton({ className = "" }: SkeletonProps) {
   return (
     <span
       aria-hidden="true"
-      className={`block animate-pulse rounded-xl bg-slate-200/70 motion-reduce:animate-none ${className}`}
+      className={`block animate-pulse rounded-lg bg-slate-200/70 motion-reduce:animate-none ${className}`}
     />
   );
 }
@@ -15,7 +15,7 @@ export function SkeletonText({ className = "" }: SkeletonProps) {
 
 export function SkeletonStatCard() {
   return (
-    <div className="panel" aria-hidden="true">
+    <div className="px-5 py-4" aria-hidden="true">
       <SkeletonText className="w-2/3" />
       <Skeleton className="mt-3 h-10 w-1/3" />
     </div>
@@ -30,7 +30,7 @@ export function SkeletonTable({
   rows?: number;
 }) {
   return (
-    <div className="panel mt-6 overflow-x-auto" aria-hidden="true">
+    <div className="table-surface" aria-hidden="true">
       <div className="min-w-[42rem]">
         <div
           className="grid gap-5 border-b border-slate-200/70 p-3"
@@ -66,12 +66,12 @@ export function SkeletonTable({
 
 export function SkeletonActivityCard() {
   return (
-    <div className="soft-card min-h-48" aria-hidden="true">
+    <div className="soft-card" aria-hidden="true">
       <SkeletonText className="w-2/3" />
       <SkeletonText className="mt-3 w-1/3" />
-      <div className="mt-12 flex gap-2">
-        <Skeleton className="h-11 w-20 rounded-full" />
-        <Skeleton className="h-11 w-24 rounded-full" />
+      <div className="mt-6 flex gap-2">
+        <Skeleton className="h-11 w-20" />
+        <Skeleton className="h-11 w-24" />
       </div>
     </div>
   );

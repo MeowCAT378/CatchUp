@@ -118,7 +118,7 @@ export default function HostRoom({
       <main className="page-shell">
         <div className="page-content" aria-busy="true">
           <BackButton href="/teacher" />
-          <header className="mt-6 grid gap-6 rounded-3xl bg-[#1d1d1f] p-6 md:grid-cols-[1fr_auto] md:p-9">
+          <header className="mt-6 grid gap-6 rounded-xl bg-[#1d1d1f] p-6 md:grid-cols-[1fr_auto] md:p-9">
             <div>
               <SkeletonText className="w-1/4 bg-white/20" />
               <Skeleton className="mt-4 h-16 w-2/3 bg-white/20" />
@@ -130,7 +130,7 @@ export default function HostRoom({
             <div className="panel">
               <SkeletonText className="w-3/4" />
               <SkeletonText className="mt-5" />
-              <Skeleton className="mt-6 h-11 w-28 rounded-full" />
+              <Skeleton className="mt-6 h-11 w-28" />
             </div>
             <div className="panel">
               <SkeletonText className="w-1/3" />
@@ -145,7 +145,7 @@ export default function HostRoom({
     <main className="page-shell">
       <div className="page-content">
         <BackButton href="/teacher" />
-        <header className="mt-6 grid gap-6 rounded-3xl bg-[#1d1d1f] p-6 text-white shadow-[0_8px_30px_rgba(0,0,0,0.16)] md:grid-cols-[1fr_auto] md:p-9">
+        <header className="mt-6 grid gap-6 rounded-xl bg-[#1d1d1f] p-6 text-white shadow-sm md:grid-cols-[1fr_auto] md:p-9">
           <div>
             <p
               role="status"
@@ -173,7 +173,7 @@ export default function HostRoom({
                 </a>
               )}
           </div>
-          <div className="mx-auto min-h-56 min-w-56 rounded-2xl bg-white p-4 text-[#1d1d1f] shadow-md lg:min-h-72 lg:min-w-72">
+          <div className="mx-auto min-h-56 min-w-56 rounded-lg bg-white p-4 text-[#1d1d1f] lg:min-h-72 lg:min-w-72">
             {joinUrl ? (
               <QRCodeSVG
                 value={joinUrl}

@@ -106,7 +106,7 @@ model Participant {
   displayName String
   attempts QuizAttempt[]
   wordCloudEntries WordCloudEntry[]
-  wordCloudVotes WordCloudVote[]
+  wordCloudVote WordCloudVote?
   joinedAt DateTime @default(now())
   @@unique([roomId, displayName])
 }
@@ -156,10 +156,9 @@ model WordCloudVote {
   id String @id @default(cuid())
   entryId String
   entry WordCloudEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  participantId String
+  participantId String @unique
   participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  @@unique([participantId, entryId])
   @@index([entryId])
 }
 

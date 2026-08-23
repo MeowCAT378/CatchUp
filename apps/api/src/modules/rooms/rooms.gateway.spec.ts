@@ -41,6 +41,7 @@ describe('RoomsGateway word cloud updates', () => {
     const emit = jest.fn();
     gateway.server = { to: jest.fn().mockReturnValue({ emit }) } as never;
     const client = {
+      handshake: { address: '127.0.0.1' },
       data: {
         role: 'participant',
         code: '123456',
@@ -74,5 +75,52 @@ describe('RoomsGateway word cloud updates', () => {
       roomId: 'room-1',
       connected: 0,
     });
+  });
+});
+
+describe('RoomsGateway event errors', () => {
+  it('returns FORBIDDEN for participant identity mismatches', async () => {
+    const gateway = new RoomsGateway({} as never, {} as never);
+    const client = {
+      data: {
+        role: 'participant',
+        code: '123456',
+        participantId: 'player',
+        participantToken: 'token',
+      },
+      emit: jest.fn(),
+    };
+
+    await gateway.answer(client as never, {
+      code: '123456',
+      participantId: 'other-player',
+      participantToken: 'token',
+      choiceId: 'choice',
+    });
+
+    expect(client.emit).toHaveBeenCalledWith(RoomEvents.error, {
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('returns VALIDATION_ERROR for malformed participant events', async () => {
+    const submit = jest.fn();
+    const gateway = new RoomsGateway({ submit } as never, {} as never);
+    const client = {
+      data: {
+        role: 'participant',
+        code: '123456',
+        participantId: 'player',
+        participantToken: 'token',
+      },
+      emit: jest.fn(),
+    };
+
+    await gateway.answer(client as never, undefined);
+
+    expect(client.emit).toHaveBeenCalledWith(RoomEvents.error, {
+      code: 'VALIDATION_ERROR',
+    });
+    expect(submit).not.toHaveBeenCalled();
   });
 });

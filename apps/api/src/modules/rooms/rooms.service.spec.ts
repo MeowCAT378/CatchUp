@@ -1,5 +1,4 @@
 import { ActivityType, Prisma, RoomPhase, RoomStatus } from '@prisma/client';
-import { AppError } from '../../common/app-error';
 import { RoomsService } from './rooms.service';
 const room = (
   phase: RoomPhase,
@@ -39,7 +38,24 @@ describe('RoomsService state machine', () => {
   ])('rejects invalid starts', async (phase, status) => {
     await expect(
       service(room(phase, status)).start('123456', 'host'),
-    ).rejects.toMatchObject<AppError>({ code: 'INVALID_ROOM_PHASE' });
+    ).rejects.toMatchObject({ code: 'INVALID_ROOM_PHASE' });
+  });
+  it('rejects a host transition when persisted state changed after the read', async () => {
+    const update = jest.fn();
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(room(RoomPhase.WAITING, RoomStatus.LOBBY)),
+        update,
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    } as never);
+
+    await expect(target.start('123456', 'host')).rejects.toMatchObject({
+      code: 'INVALID_ROOM_PHASE',
+    });
+    expect(update).not.toHaveBeenCalled();
   });
   it('rejects reveal before active question and answers after reveal', async () => {
     await expect(
@@ -274,10 +290,7 @@ describe('RoomsService state machine', () => {
     });
   });
   it('uses the word-cloud waiting, active, completed lifecycle only', async () => {
-    const update = jest
-      .fn()
-      .mockResolvedValueOnce({ phase: RoomPhase.ACTIVE })
-      .mockResolvedValueOnce({ phase: RoomPhase.COMPLETED });
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const target = new RoomsService({
       room: {
         findUnique: jest
@@ -285,7 +298,10 @@ describe('RoomsService state machine', () => {
           .mockResolvedValue(
             room(RoomPhase.WAITING, RoomStatus.LOBBY, ActivityType.WORD_CLOUD),
           ),
-        update,
+        updateMany,
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ phase: RoomPhase.ACTIVE }),
       },
     } as never);
     await expect(target.start('123456', 'host')).resolves.toEqual({
@@ -298,7 +314,10 @@ describe('RoomsService state machine', () => {
           .mockResolvedValue(
             room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
           ),
-        update,
+        updateMany,
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ phase: RoomPhase.COMPLETED }),
       },
     } as never);
     await expect(active.complete('123456', 'host')).resolves.toEqual({
@@ -313,24 +332,31 @@ describe('RoomsService state machine', () => {
       { id: 'q1', text: 'First', choices: [{ id: 'c1', isCorrect: false }] },
       { id: 'q2', text: 'Second', choices: [{ id: 'c2', isCorrect: false }] },
     ];
-    const update = jest.fn().mockResolvedValue({
+    const updated = {
       status: RoomStatus.ACTIVE,
       phase: RoomPhase.ACTIVE,
       currentQuestionIndex: 1,
-    });
+    };
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const target = new RoomsService({
       room: {
         findUnique: jest.fn().mockResolvedValue({
           ...room(RoomPhase.REVEALED, RoomStatus.ACTIVE, ActivityType.POLL),
           quiz: { type: ActivityType.POLL, questions },
         }),
-        update,
+        updateMany,
+        findUniqueOrThrow: jest.fn().mockResolvedValue(updated),
       },
     } as never);
 
     await target.next('123456', 'host');
-    expect(update).toHaveBeenCalledWith({
-      where: { id: 'r1' },
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'r1',
+        status: RoomStatus.ACTIVE,
+        phase: RoomPhase.REVEALED,
+        currentQuestionIndex: 0,
+      },
       data: { currentQuestionIndex: 1, phase: RoomPhase.ACTIVE },
     });
   });
@@ -350,7 +376,10 @@ describe('RoomsService state machine', () => {
             ],
           },
         }),
-        update: jest.fn().mockResolvedValue({ phase: RoomPhase.REVEALED }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ phase: RoomPhase.REVEALED }),
       },
     } as never);
 
@@ -571,8 +600,7 @@ describe('RoomsService state machine', () => {
     expect(create).not.toHaveBeenCalled();
   });
   it('moves a word-cloud vote and rejects voting for own entry', async () => {
-    const deleteMany = jest.fn();
-    const create = jest.fn();
+    const upsert = jest.fn();
     const target = new RoomsService({
       room: {
         findUnique: jest
@@ -590,20 +618,14 @@ describe('RoomsService state machine', () => {
           .mockResolvedValue({ id: 'other', participantId: 'other-player' }),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      $transaction: jest.fn((action) =>
-        action({ wordCloudVote: { deleteMany, create } }),
-      ),
+      wordCloudVote: { upsert },
     } as never);
 
     await target.voteWord('123456', 'player', 'token', 'other');
-    expect(deleteMany).toHaveBeenCalledWith({
-      where: {
-        participantId: 'player',
-        entry: { roomId: 'r1', questionId: 'q1' },
-      },
-    });
-    expect(create).toHaveBeenCalledWith({
-      data: { entryId: 'other', participantId: 'player' },
+    expect(upsert).toHaveBeenCalledWith({
+      where: { participantId: 'player' },
+      update: { entryId: 'other' },
+      create: { entryId: 'other', participantId: 'player' },
     });
 
     (

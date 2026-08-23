@@ -6,16 +6,19 @@ import {
   Param,
   Post,
   Query,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import type { Response } from 'express';
+import type { Request } from 'express';
 import type { AuthUser } from '../../common/auth/auth-user';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
+import { checkRateLimit } from '../../common/rate-limit';
 import {
   CreateRoomDto,
   JoinRoomDto,
@@ -42,7 +45,8 @@ export class RoomsController {
   create(@CurrentUser() u: AuthUser, @Body() dto: CreateRoomDto) {
     return this.rooms.create(dto.quizId, u.sub);
   }
-  @Post('join') join(@Body() dto: JoinRoomDto) {
+  @Post('join') join(@Req() request: Request, @Body() dto: JoinRoomDto) {
+    checkRateLimit(`room-join:${request.ip}`, 300, 60_000);
     return this.rooms.join(dto.code, dto.displayName);
   }
   @Get('history')
@@ -130,18 +134,23 @@ export class RoomsController {
     @Param('code') code: string,
     @CurrentUser() u: AuthUser,
   ) {
+    checkRateLimit(`host-control:${u.sub}:${code}`, 20, 10_000);
     return this.rooms.start(code, u.sub);
   }
   @Post(':code/next') @UseGuards(JwtAuthGuard) next(
     @Param('code') code: string,
     @CurrentUser() u: AuthUser,
   ) {
+    checkRateLimit(`host-control:${u.sub}:${code}`, 20, 10_000);
     return this.rooms.next(code, u.sub);
   }
   @Post(':code/answers') answer(
+    @Req() request: Request,
     @Param('code') code: string,
     @Body() dto: SubmitAnswerDto,
   ) {
+    checkRateLimit(`participant-action-address:${request.ip}`, 600, 10_000);
+    checkRateLimit(`participant-action:${dto.participantId}`, 30, 10_000);
     return this.rooms.submit(
       code,
       dto.participantId,
@@ -150,9 +159,12 @@ export class RoomsController {
     );
   }
   @Post(':code/word-cloud/entries') word(
+    @Req() request: Request,
     @Param('code') code: string,
     @Body() dto: SubmitWordDto,
   ) {
+    checkRateLimit(`participant-action-address:${request.ip}`, 600, 10_000);
+    checkRateLimit(`participant-action:${dto.participantId}`, 30, 10_000);
     return this.rooms.submitWord(
       code,
       dto.participantId,
@@ -161,9 +173,12 @@ export class RoomsController {
     );
   }
   @Post(':code/word-cloud/votes') voteWord(
+    @Req() request: Request,
     @Param('code') code: string,
     @Body() dto: VoteWordDto,
   ) {
+    checkRateLimit(`participant-action-address:${request.ip}`, 600, 10_000);
+    checkRateLimit(`participant-action:${dto.participantId}`, 30, 10_000);
     return this.rooms.voteWord(
       code,
       dto.participantId,

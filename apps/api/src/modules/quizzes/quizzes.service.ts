@@ -73,7 +73,8 @@ export class QuizzesService {
         },
       },
     });
-    if (!quiz) throw new AppError('QUIZ_NOT_FOUND', 404, 'Quiz not found');
+    if (!quiz || quiz.deletedAt)
+      throw new AppError('QUIZ_NOT_FOUND', 404, 'Quiz not found');
     if (quiz.ownerId !== ownerId) throw new ForbiddenException();
     return this.prisma.quiz.create({
       data: {
@@ -138,7 +139,7 @@ export class QuizzesService {
         quiz: { include: { _count: { select: { rooms: true } } } },
       },
     });
-    if (!question)
+    if (!question || question.quiz.deletedAt)
       throw new AppError('QUESTION_NOT_FOUND', 404, 'Question not found');
     if (question.quiz.ownerId !== ownerId) throw new ForbiddenException();
     if (question.quiz._count.rooms)
@@ -162,7 +163,7 @@ export class QuizzesService {
       where: { id },
       include: { quiz: { include: { _count: { select: { rooms: true } } } } },
     });
-    if (!question)
+    if (!question || question.quiz.deletedAt)
       throw new AppError('QUESTION_NOT_FOUND', 404, 'Question not found');
     if (question.quiz.ownerId !== ownerId) throw new ForbiddenException();
     if (question.quiz._count.rooms)

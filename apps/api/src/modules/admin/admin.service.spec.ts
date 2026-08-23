@@ -19,8 +19,11 @@ describe('AdminService teacher status', () => {
         update,
       },
       adminAuditLog: { create: audit },
-      $transaction: jest.fn((work: (tx: unknown) => unknown) => work(prisma)),
+      $transaction: jest.fn(),
     };
+    prisma.$transaction.mockImplementation(
+      (work: (tx: typeof prisma) => unknown) => work(prisma),
+    );
     const disconnectHost = jest.fn();
     const service = new AdminService(
       prisma as never,

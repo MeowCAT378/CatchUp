@@ -269,11 +269,7 @@ async function main() {
   console.log('CatchUp development database seeded.\n\nAdmin:');
   console.log(`Email: ${adminEmail}`);
   console.log('Password: [loaded from CATCHUP_SEED_ADMIN_PASSWORD]');
-  for (const [offset, account] of accounts.slice(1).entries()) {
-    console.log(`\nMock Host ${offset + 2}:`);
-    console.log(`Email: ${account.email}`);
-    console.log(`Password: ${account.password}`);
-  }
+  console.log('\nMock host passwords are generated and not disclosed.');
   console.log('\nKazuma Kiryu:');
   console.log('Email: kazama@test.com');
   console.log('Password: [loaded from CATCHUP_SEED_KAZUMA_PASSWORD]');

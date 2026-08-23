@@ -31,8 +31,8 @@ development migration.
 
 ## Development seed
 
-Set `CATCHUP_SEED_PASSWORD` in the local API `.env` to at least 12
-non-whitespace characters, then run:
+Set `CATCHUP_SEED_ADMIN_PASSWORD` and `CATCHUP_SEED_KAZUMA_PASSWORD` in the
+local API `.env` to non-whitespace development passwords, then run:
 
 ```bash
 npm run seed
@@ -78,6 +78,6 @@ be running.
 | --- | --- |
 | API | `http://localhost:3001` |
 | Web origin | `http://localhost:3000` |
-| PostgreSQL | `127.0.0.1:5434` |
+| PostgreSQL | `127.0.0.1:5432` |
 | Test PostgreSQL | `127.0.0.1:5433` |
 | pgAdmin | `http://127.0.0.1:5050` |

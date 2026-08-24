@@ -4,6 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const notoSansThaiLooped = Noto_Sans_Thai_Looped({
   variable: "--font-noto-sans-thai-looped",
@@ -27,6 +28,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <LanguageSwitcher hideOnTeacher />
           </div>
           {children}
+          <Analytics />
+          <SpeedInsights />
         </LanguageProvider>
       </body>
     </html>

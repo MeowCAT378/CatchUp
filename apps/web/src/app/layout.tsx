@@ -3,6 +3,7 @@ import { Noto_Sans_Thai_Looped } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { Analytics } from "@vercel/analytics/next"
 
 const notoSansThaiLooped = Noto_Sans_Thai_Looped({
   variable: "--font-noto-sans-thai-looped",

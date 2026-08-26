@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonTable } from "@/components/skeleton";
 import { Select, type SelectOption } from "@/components/select";
+import { Dialog } from "@/components/dialog";
 
 type Teacher = {
   id: string;
   name: string | null;
   email: string;
+  role: "HOST" | "ADMIN";
   isDisabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +30,9 @@ export function AdminTeachers() {
   const [page, setPage] = useState(1);
   const [loadedQuery, setLoadedQuery] = useState("");
   const [error, setError] = useState<ApiErrorCode | "">("");
+  const [message, setMessage] = useState("");
+  const [promoting, setPromoting] = useState<Teacher>();
+  const [promotingId, setPromotingId] = useState("");
   const statusOptions: SelectOption[] = [
     { value: "", label: t("admin.allStatuses") },
     { value: "ACTIVE", label: t("admin.active") },
@@ -66,6 +71,37 @@ export function AdminTeachers() {
     setPage(1);
     setSearch(input.trim());
   }
+  async function promote() {
+    if (!promoting || promotingId) return;
+    setPromotingId(promoting.id);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await secureApi<Pick<Teacher, "id" | "role">>(
+        `/admin/users/${promoting.id}/role`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ role: "ADMIN" }),
+        },
+      );
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) =>
+                item.id === updated.id ? { ...item, role: updated.role } : item,
+              ),
+            }
+          : current,
+      );
+      setPromoting(undefined);
+      setMessage(t("admin.roleChanged"));
+    } catch (value) {
+      setError(apiErrorCode(value));
+    } finally {
+      setPromotingId("");
+    }
+  }
   return (
     <main className="page-shell">
       <div className="page-content max-w-7xl">
@@ -86,12 +122,31 @@ export function AdminTeachers() {
             />
           </label>
           <div>
-            <label id="admin-teacher-status-label" htmlFor="admin-teacher-status" className="mb-1.5 block text-xs font-medium text-slate-700">{t("admin.status")}</label>
-            <Select id="admin-teacher-status" labelId="admin-teacher-status-label" value={status} onValueChange={(value) => { setPage(1); setStatus(value); }} options={statusOptions} />
+            <label
+              id="admin-teacher-status-label"
+              htmlFor="admin-teacher-status"
+              className="mb-1.5 block text-xs font-medium text-slate-700"
+            >
+              {t("admin.status")}
+            </label>
+            <Select
+              id="admin-teacher-status"
+              labelId="admin-teacher-status-label"
+              value={status}
+              onValueChange={(value) => {
+                setPage(1);
+                setStatus(value);
+              }}
+              options={statusOptions}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
-            <span className="block text-xs font-medium" aria-hidden="true">&nbsp;</span>
-            <button type="submit" className="btn-primary h-11 min-h-0 w-full">{t("admin.search")}</button>
+            <span className="block text-xs font-medium" aria-hidden="true">
+              &nbsp;
+            </span>
+            <button type="submit" className="btn-primary h-11 min-h-0 w-full">
+              {t("admin.search")}
+            </button>
           </div>
         </form>
         {error && (
@@ -99,19 +154,36 @@ export function AdminTeachers() {
             {t(`errors.${error}`)}
           </p>
         )}
+        {message && (
+          <p
+            className="mt-5 rounded-lg bg-emerald-50 px-4 py-3 text-emerald-800"
+            role="status"
+          >
+            {message}
+          </p>
+        )}
         {loading && !result ? (
-          <div aria-busy="true"><SkeletonTable columns={7} /></div>
+          <div aria-busy="true">
+            <SkeletonTable columns={8} />
+          </div>
         ) : result?.items.length ? (
           <div className="table-surface">
             <table className="data-table min-w-[36rem] sm:min-w-0">
               <thead>
                 <tr>
                   <th>{t("common.name")}</th>
+                  <th>{t("admin.role")}</th>
                   <th>{t("admin.status")}</th>
-                  <th className="hidden sm:table-cell">{t("admin.activities")}</th>
-                  <th className="hidden sm:table-cell">{t("admin.sessions")}</th>
+                  <th className="hidden sm:table-cell">
+                    {t("admin.activities")}
+                  </th>
+                  <th className="hidden sm:table-cell">
+                    {t("admin.sessions")}
+                  </th>
                   <th className="hidden lg:table-cell">{t("admin.dates")}</th>
-                  <th className="hidden lg:table-cell">{t("admin.lastActivity")}</th>
+                  <th className="hidden lg:table-cell">
+                    {t("admin.lastActivity")}
+                  </th>
                   <th>
                     <span className="sr-only">{t("admin.teacherDetails")}</span>
                   </th>
@@ -125,10 +197,25 @@ export function AdminTeachers() {
                       <div className="break-all text-sm text-slate-500">
                         {teacher.email}
                       </div>
-                      <div className="hidden text-xs text-slate-400 sm:block">{teacher.id}</div>
+                      <div className="hidden text-xs text-slate-400 sm:block">
+                        {teacher.id}
+                      </div>
                     </td>
                     <td>
-                      <span className={`badge ${teacher.isDisabled ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>
+                      <span
+                        className={`badge ${teacher.role === "ADMIN" ? "bg-cyan-50 text-cyan-900" : "bg-sky-50 text-sky-800"}`}
+                      >
+                        {t(
+                          teacher.role === "ADMIN"
+                            ? "admin.adminRole"
+                            : "admin.teacherRole",
+                        )}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`badge ${teacher.isDisabled ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}
+                      >
                         {t(
                           teacher.isDisabled
                             ? "admin.disabled"
@@ -136,15 +223,33 @@ export function AdminTeachers() {
                         )}
                       </span>
                     </td>
-                    <td className="hidden tabular-nums sm:table-cell">{teacher.activityCount}</td>
-                    <td className="hidden tabular-nums sm:table-cell">{teacher.sessionCount}</td>
+                    <td className="hidden tabular-nums sm:table-cell">
+                      {teacher.activityCount}
+                    </td>
+                    <td className="hidden tabular-nums sm:table-cell">
+                      {teacher.sessionCount}
+                    </td>
                     <td className="hidden text-sm lg:table-cell">
                       {date(teacher.createdAt)}
                       <br />
                       {date(teacher.updatedAt)}
                     </td>
-                    <td className="hidden lg:table-cell">{date(teacher.lastActivityAt)}</td>
-                    <td>
+                    <td className="hidden lg:table-cell">
+                      {date(teacher.lastActivityAt)}
+                    </td>
+                    <td className="space-y-2 sm:space-x-2 sm:space-y-0">
+                      {teacher.role === "HOST" && (
+                        <button
+                          type="button"
+                          disabled={Boolean(promotingId)}
+                          onClick={() => setPromoting(teacher)}
+                          className="btn-primary px-3"
+                        >
+                          {promotingId === teacher.id
+                            ? t("admin.promoting")
+                            : t("admin.promoteToAdmin")}
+                        </button>
+                      )}
                       <a
                         className="btn-secondary px-3"
                         href={`/admin/teachers/${teacher.id}`}
@@ -183,6 +288,45 @@ export function AdminTeachers() {
               {t("history.next")}
             </button>
           </nav>
+        )}
+        {promoting && (
+          <Dialog
+            labelledBy="promote-user-title"
+            describedBy="promote-user-warning"
+            onClose={() => setPromoting(undefined)}
+          >
+            <div className="panel">
+              <h2 id="promote-user-title" className="section-title">
+                {t("admin.promoteTitle", {
+                  name: promoting.name ?? promoting.email,
+                })}
+              </h2>
+              <p id="promote-user-warning" className="mt-3 text-slate-600">
+                {t("admin.promoteWarning")}
+              </p>
+              <div className="mt-5 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  autoFocus
+                  disabled={Boolean(promotingId)}
+                  onClick={() => setPromoting(undefined)}
+                  className="btn-secondary"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(promotingId)}
+                  onClick={() => void promote()}
+                  className="btn-primary"
+                >
+                  {promotingId
+                    ? t("admin.promoting")
+                    : t("admin.promoteToAdmin")}
+                </button>
+              </div>
+            </div>
+          </Dialog>
         )}
       </div>
     </main>

@@ -23,3 +23,4 @@ apps/web/.env.local
 *.tsbuildinfo
 command.txt
 .vercel
+doc/

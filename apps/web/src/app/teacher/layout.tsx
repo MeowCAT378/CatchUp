@@ -6,10 +6,10 @@ export default async function TeacherLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireUser("HOST");
+  const { user } = await requireUser("HOST");
   return (
     <>
-      <TeacherHeader />
+      <TeacherHeader isAdmin={user.role === "ADMIN"} />
       {children}
     </>
   );

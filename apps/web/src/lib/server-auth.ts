@@ -22,7 +22,11 @@ export async function requireUser(role?: CurrentUser["role"]) {
   );
   if (!response.ok) redirect("/login");
   const body = (await response.json()) as { data: CurrentUser };
-  if (role && body.data.role !== role)
+  if (
+    role &&
+    body.data.role !== role &&
+    !(body.data.role === "ADMIN" && role === "HOST")
+  )
     redirect(body.data.role === "ADMIN" ? "/admin" : "/teacher");
   return { token: session.accessToken, user: body.data };
 }

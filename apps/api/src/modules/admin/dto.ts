@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -11,6 +12,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { Role } from '@prisma/client';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -40,4 +42,8 @@ export class UpdateTeacherDto {
 
 export class UpdateTeacherStatusDto {
   @IsBoolean() isDisabled!: boolean;
+}
+
+export class UpdateUserRoleDto {
+  @IsEnum(Role) role!: Role;
 }

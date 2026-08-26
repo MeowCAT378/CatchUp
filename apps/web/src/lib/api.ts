@@ -10,10 +10,8 @@ export const apiBaseUrl = deploymentUrl(
   process.env.NEXT_PUBLIC_API_URL,
   "NEXT_PUBLIC_API_URL",
 );
-export const socketBaseUrl = process.env.NEXT_PUBLIC_SOCKET_URL?.trim().replace(
-  /\/$/,
-  "",
-) || apiBaseUrl;
+export const socketBaseUrl =
+  process.env.NEXT_PUBLIC_SOCKET_URL?.trim().replace(/\/$/, "") || apiBaseUrl;
 
 export type ApiErrorCode =
   | "ROOM_NOT_FOUND"
@@ -23,6 +21,9 @@ export type ApiErrorCode =
   | "EMAIL_IN_USE"
   | "ACCOUNT_DISABLED"
   | "TEACHER_NOT_FOUND"
+  | "USER_NOT_FOUND"
+  | "SELF_ROLE_CHANGE"
+  | "INVALID_ROLE_TRANSITION"
   | "DISPLAY_NAME_IN_USE"
   | "DUPLICATE_ENTRY"
   | "ALREADY_VOTED"

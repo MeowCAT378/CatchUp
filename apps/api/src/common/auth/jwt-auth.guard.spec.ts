@@ -7,6 +7,14 @@ const context = (request: object) =>
   }) as never;
 
 describe('JwtAuthGuard current account checks', () => {
+  it('rejects requests without a bearer token', async () => {
+    const guard = new JwtAuthGuard({} as never, {} as never);
+
+    await expect(
+      guard.canActivate(context({ headers: {} })),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
   it('uses current database role instead of stale JWT claims', async () => {
     const request = { headers: { authorization: 'Bearer token' } };
     const guard = new JwtAuthGuard(

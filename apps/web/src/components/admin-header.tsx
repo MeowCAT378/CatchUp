@@ -24,13 +24,16 @@ export function AdminHeader() {
           <Logo className="h-12 w-auto" />
         </a>
         <nav
-          className="order-3 col-span-2 grid w-full grid-cols-3 gap-1 sm:order-none sm:col-span-1 sm:flex sm:w-auto sm:items-center sm:justify-end sm:gap-2"
+          className="order-3 col-span-2 grid w-full grid-cols-2 gap-1 sm:order-none sm:col-span-1 sm:flex sm:w-auto sm:items-center sm:justify-end sm:gap-2"
           aria-label={t("admin.navigation")}
         >
           <Link
-            href="/admin"
-            className={linkClass(pathname === "/admin")}
+            href="/teacher"
+            className={linkClass(pathname.startsWith("/teacher"))}
           >
+            {t("admin.activities")}
+          </Link>
+          <Link href="/admin" className={linkClass(pathname === "/admin")}>
             {t("admin.overview")}
           </Link>
           <Link

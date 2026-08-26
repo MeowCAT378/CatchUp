@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Logo } from "@/components/logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
-export function TeacherHeader() {
+export function TeacherHeader({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useTranslation();
   const pathname = usePathname();
   return (
@@ -22,6 +22,14 @@ export function TeacherHeader() {
           <Logo className="h-12 w-auto sm:h-14" />
         </a>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="min-h-11 rounded-md px-3 py-2.5 text-sm font-medium transition-colors hover:bg-neutral-100"
+            >
+              {t("admin.overview")}
+            </Link>
+          )}
           <Link
             href="/teacher/history"
             className={`min-h-11 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${pathname.startsWith("/teacher/history") ? "bg-sky-50 text-sky-800" : "hover:bg-neutral-100"}`}

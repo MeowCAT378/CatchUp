@@ -18,6 +18,7 @@ import {
   TeacherQueryDto,
   UpdateTeacherDto,
   UpdateTeacherStatusDto,
+  UpdateUserRoleDto,
 } from './dto';
 
 @Controller('admin')
@@ -48,5 +49,12 @@ export class AdminController {
     @Body() dto: UpdateTeacherStatusDto,
   ) {
     return this.admin.updateStatus(user.sub, id, dto);
+  }
+  @Patch('users/:id/role') updateRole(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserRoleDto,
+  ) {
+    return this.admin.updateRole(user.sub, id, dto);
   }
 }

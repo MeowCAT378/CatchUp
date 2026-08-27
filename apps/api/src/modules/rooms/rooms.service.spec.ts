@@ -464,6 +464,11 @@ describe('RoomsService state machine', () => {
   });
   it('uses attributed word-cloud responders for dashboard completion', async () => {
     const answerFindMany = jest.fn();
+    const findUnique = jest
+      .fn()
+      .mockResolvedValue(
+        room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+      );
     const groupBy = jest
       .fn()
       .mockResolvedValue([
@@ -471,13 +476,7 @@ describe('RoomsService state machine', () => {
         { participantId: null },
       ]);
     const target = new RoomsService({
-      room: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue(
-            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
-          ),
-      },
+      room: { findUnique },
       participant: {
         findMany: jest.fn().mockResolvedValue([
           { id: 'player-1', displayName: 'Submitted' },
@@ -513,6 +512,7 @@ describe('RoomsService state machine', () => {
       progress: { submitted: 1, participants: 2 },
     });
     expect(answerFindMany).not.toHaveBeenCalled();
+    expect(findUnique).toHaveBeenCalledTimes(1);
     expect(groupBy).toHaveBeenCalledWith({
       by: ['participantId'],
       where: {

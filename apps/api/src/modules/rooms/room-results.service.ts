@@ -9,29 +9,57 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { competitionRanks } from './ranking';
 import { pointsForAnswer } from './scoring';
 
-const resultInclude = {
+const resultSelect = {
+  id: true,
+  code: true,
+  hostId: true,
+  activityTitle: true,
+  activityType: true,
+  status: true,
+  phase: true,
+  createdAt: true,
+  startedAt: true,
+  endedAt: true,
   host: { select: { id: true, name: true, email: true } },
   quiz: {
-    include: {
+    select: {
+      title: true,
+      type: true,
       questions: {
-        include: { choices: true },
+        select: {
+          id: true,
+          text: true,
+          choices: { select: { id: true, text: true, isCorrect: true } },
+        },
         orderBy: { position: 'asc' as const },
       },
     },
   },
   attempts: {
-    include: {
-      participant: true,
-      answers: { include: { choice: true, question: true } },
+    select: {
+      participantId: true,
+      score: true,
+      participant: { select: { displayName: true } },
+      answers: {
+        select: {
+          questionId: true,
+          choiceId: true,
+          isCorrect: true,
+          submittedAt: true,
+        },
+      },
     },
   },
   wordCloudEntries: {
-    include: {
+    select: {
+      participantId: true,
+      questionId: true,
+      text: true,
       _count: { select: { votes: true } },
       votes: { select: { participantId: true } },
     },
   },
-} satisfies Prisma.RoomInclude;
+} satisfies Prisma.RoomSelect;
 
 @Injectable()
 export class RoomResultsService {
@@ -51,7 +79,7 @@ export class RoomResultsService {
   ) {
     const room = await this.prisma.room.findUnique({
       where,
-      include: resultInclude,
+      select: resultSelect,
     });
     if (!room) throw new NotFoundException('Room not found');
     const viewerId = typeof viewer === 'string' ? viewer : viewer.sub;
@@ -62,6 +90,14 @@ export class RoomResultsService {
     const attempts = [...room.attempts].sort((a, b) => b.score - a.score);
     const allAnswers = attempts.flatMap((attempt) =>
       attempt.answers.map((answer) => ({ ...answer, attempt })),
+    );
+    const questionsById = new Map(
+      room.quiz.questions.map((question) => [question.id, question]),
+    );
+    const choicesById = new Map(
+      room.quiz.questions.flatMap((question) =>
+        question.choices.map((choice) => [choice.id, choice] as const),
+      ),
     );
     const wordResponders = new Set(
       room.wordCloudEntries.flatMap((entry) => [
@@ -175,8 +211,8 @@ export class RoomResultsService {
       }),
       responses: allAnswers.map((answer) => ({
         participant: answer.attempt.participant.displayName,
-        question: answer.question.text,
-        selectedAnswer: answer.choice.text,
+        question: questionsById.get(answer.questionId)?.text ?? '',
+        selectedAnswer: choicesById.get(answer.choiceId)?.text ?? '',
         correctAnswer:
           answersAllowed && isQuiz
             ? (room.quiz.questions

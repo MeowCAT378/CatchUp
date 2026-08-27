@@ -86,8 +86,13 @@ export class RoomsService {
       throw e;
     }
   }
-  async state(code: string, participantId?: string, participantToken?: string) {
-    const room = await this.room(code);
+  async state(
+    code: string,
+    participantId?: string,
+    participantToken?: string,
+    loadedRoom?: Awaited<ReturnType<RoomsService['room']>>,
+  ) {
+    const room = loadedRoom ?? (await this.room(code));
     if (
       (participantId || participantToken) &&
       (!participantId ||
@@ -98,6 +103,7 @@ export class RoomsService {
             roomId: room.id,
             accessToken: participantToken,
           },
+          select: { id: true },
         })))
     )
       throw new AppError(
@@ -303,6 +309,7 @@ export class RoomsService {
         participantId,
         participant: { accessToken: participantToken },
       },
+      select: { id: true },
     });
     if (!attempt)
       throw new AppError(
@@ -478,8 +485,12 @@ export class RoomsService {
     });
     return this.wordCloudEntries(room.id, question.id, participantId);
   }
-  async result(code: string, participantId?: string) {
-    const room = await this.room(code);
+  async result(
+    code: string,
+    participantId?: string,
+    loadedRoom?: Awaited<ReturnType<RoomsService['room']>>,
+  ) {
+    const room = loadedRoom ?? (await this.room(code));
     if (!activityLifecycle(room.quiz.type).scoresAnswers) {
       const question = room.quiz.questions[room.currentQuestionIndex];
       const visiblePoll =
@@ -521,7 +532,11 @@ export class RoomsService {
     }
     const leaderboard = await this.prisma.quizAttempt.findMany({
       where: { roomId: room.id },
-      include: { participant: true },
+      select: {
+        participantId: true,
+        score: true,
+        participant: { select: { displayName: true } },
+      },
       orderBy: { score: 'desc' },
       take: LIVE_LEADERBOARD_LIMIT,
     });
@@ -539,7 +554,11 @@ export class RoomsService {
         where: {
           roomId_participantId: { roomId: room.id, participantId },
         },
-        include: { participant: true },
+        select: {
+          participantId: true,
+          score: true,
+          participant: { select: { displayName: true } },
+        },
       });
       if (ownAttempt)
         rankedLeaderboard.push({
@@ -610,6 +629,7 @@ export class RoomsService {
         roomId: room.id,
         accessToken: participantToken,
       },
+      select: { id: true, displayName: true },
     });
     if (!participant)
       throw new ForbiddenException('Participant is not in this room');
@@ -622,14 +642,17 @@ export class RoomsService {
     };
   }
   async dashboard(code: string, hostId: string) {
-    await this.hostRoom(code, hostId);
-    return this.dashboardState(code);
+    return this.dashboardState(code, await this.hostRoom(code, hostId));
   }
-  async dashboardState(code: string) {
-    const room = await this.room(code);
+  async dashboardState(
+    code: string,
+    loadedRoom?: Awaited<ReturnType<RoomsService['room']>>,
+  ) {
+    const room = loadedRoom ?? (await this.room(code));
     const question = room.quiz.questions[room.currentQuestionIndex];
     const participants = await this.prisma.participant.findMany({
       where: { roomId: room.id },
+      select: { id: true, displayName: true },
       orderBy: { joinedAt: 'asc' },
     });
     const lifecycle = activityLifecycle(room.quiz.type);
@@ -679,7 +702,7 @@ export class RoomsService {
         : [];
     return {
       roomId: room.id,
-      state: await this.state(code),
+      state: await this.state(code, undefined, undefined, room),
       participants: participants.map((participant) => ({
         id: participant.id,
         name: participant.displayName,
@@ -700,7 +723,7 @@ export class RoomsService {
             })) ?? [])
           : [],
       entries,
-      leaderboard: (await this.result(code)).leaderboard,
+      leaderboard: (await this.result(code, undefined, room)).leaderboard,
     };
   }
   private async participantAttempt(
@@ -714,6 +737,7 @@ export class RoomsService {
         participantId,
         participant: { accessToken: participantToken },
       },
+      select: { id: true },
     });
     if (!attempt)
       throw new AppError(

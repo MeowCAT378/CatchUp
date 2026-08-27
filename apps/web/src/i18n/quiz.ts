@@ -1,7 +1,7 @@
 export const quiz = {
   th: {
     quiz: {
-      myQuizzes: "แบบทดสอบของฉัน",
+      myQuizzes: "กิจกรรมของฉัน",
       newQuiz: "ชื่อแบบทดสอบใหม่",
       openRoom: "เปิดห้อง",
       hostControls: "ควบคุมห้อง",
@@ -14,7 +14,7 @@ export const quiz = {
       quizEditor: "แก้ไขแบบทดสอบ",
       quizTitle: "ชื่อแบบทดสอบ",
       description: "คำอธิบาย",
-      questionText: "ข้อความคำถาม",
+      questionText: "คำถาม",
       choiceNumber: "ตัวเลือก {{number}}",
       markCorrect: "เลือกเป็นคำตอบที่ถูกต้อง",
       addQuestionHint: "กรอกคำถามและตัวเลือกให้ครบ",
@@ -32,7 +32,7 @@ export const quiz = {
   },
   en: {
     quiz: {
-      myQuizzes: "My quizzes",
+      myQuizzes: "My activities",
       newQuiz: "New quiz title",
       openRoom: "Open room",
       hostControls: "Host controls",
@@ -66,19 +66,38 @@ export const quiz = {
 export const activity = {
   th: {
     activity: {
-      title: "ชื่อ{{type}}",
-      QUIZ: { name: "แบบทดสอบ", description: "คำถามแบบมีคำตอบถูก" },
-      POLL: { name: "แบบสำรวจ", description: "สำรวจความคิดเห็น" },
-      WORD_CLOUD: { name: "เวิร์ดคลาวด์", description: "เสนอคำและโหวต" },
+      QUIZ: {
+        name: "แบบทดสอบ",
+        title: "ชื่อแบบทดสอบ",
+        description: "คำถามที่มีคำตอบถูกต้อง",
+      },
+      POLL: {
+        name: "แบบสำรวจ",
+        title: "ชื่อแบบสำรวจ",
+        description: "สำรวจความคิดเห็น",
+      },
+      WORD_CLOUD: {
+        name: "Word Cloud",
+        title: "ชื่อ Word Cloud",
+        description: "ส่งคำและโหวต",
+      },
     },
   },
   en: {
     activity: {
-      title: "{{type}} title",
-      QUIZ: { name: "Quiz", description: "Questions with correct answers" },
-      POLL: { name: "Polling", description: "Collect opinions" },
+      QUIZ: {
+        name: "Quiz",
+        title: "Quiz title",
+        description: "Questions with correct answers",
+      },
+      POLL: {
+        name: "Polling",
+        title: "Polling title",
+        description: "Collect opinions",
+      },
       WORD_CLOUD: {
         name: "Word Cloud",
+        title: "Word Cloud title",
         description: "Suggest and vote on entries",
       },
     },

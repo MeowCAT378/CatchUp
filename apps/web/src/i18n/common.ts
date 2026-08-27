@@ -6,15 +6,15 @@ export const common = {
       english: "English",
       loading: "กำลังโหลด…",
       retry: "ลองใหม่",
-      back: "กลับ",
+      back: "ย้อนกลับ",
       create: "สร้าง",
       edit: "แก้ไข",
       duplicate: "ทำสำเนา",
       delete: "ลบ",
       save: "บันทึก",
       connected: "เชื่อมต่อแล้ว",
-      reconnecting: "กำลังเชื่อมต่อใหม่",
-      disconnected: "ตัดการเชื่อมต่อ",
+      reconnecting: "กำลังเชื่อมต่อใหม่…",
+      disconnected: "ขาดการเชื่อมต่อ",
       roomCode: "รหัสห้อง",
       participants: "ผู้เข้าร่วม",
       answered: "ตอบแล้ว",
@@ -50,14 +50,3 @@ export const common = {
     },
   },
 };
-
-common.th.common.back = String.fromCodePoint(
-  0xe22,
-  0xe49,
-  0xe2d,
-  0xe19,
-  0xe01,
-  0xe25,
-  0xe31,
-  0xe1a,
-);

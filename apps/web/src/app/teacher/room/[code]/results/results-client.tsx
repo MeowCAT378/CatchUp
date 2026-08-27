@@ -182,7 +182,7 @@ export default function ResultsClient({
         <BackButton href={backHref ?? `/teacher/room/${code}`} />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="page-title">
-            {results.room.quizTitle} {t("results.results")}
+            {t("results.results", { title: results.room.quizTitle })}
           </h1>
           <span className="flex gap-2">
             <button
@@ -264,12 +264,12 @@ export default function ResultsClient({
                 </h3>
                 <p className="mt-2 text-sm">
                   {question.responseCount} {t("results.responses")} ·{" "}
-                  {question.unansweredCount} {t("results.unanswered")}
+                  {t("results.unanswered")}: {question.unansweredCount}
                   {results.room.activityType === "QUIZ" && (
                     <>
                       {" "}
-                      · {question.correctCount} {t("results.correct")} ·{" "}
-                      {question.incorrectCount} {t("results.incorrect")} ·{" "}
+                      · {t("results.correct")}: {question.correctCount} ·{" "}
+                      {t("results.incorrect")}: {question.incorrectCount} ·{" "}
                       {t("results.correctPercentage")}:{" "}
                       {question.correctPercentage}%
                     </>
@@ -291,8 +291,10 @@ export default function ResultsClient({
                         >
                           <span>{word.text}</span>
                           <span>
-                            {word.submissionCount} {t("history.submissions")} ·{" "}
-                            {word.voteCount} {t("history.votes")}
+                            {t("history.wordStats", {
+                              submissions: word.submissionCount,
+                              votes: word.voteCount,
+                            })}
                           </span>
                         </div>
                       ))
@@ -334,7 +336,7 @@ export default function ResultsClient({
               <thead>
                 <tr className="border-b">
                   <th>{t("results.participant")}</th>
-                  <th>{t("results.questionNumber", { number: "" })}</th>
+                  <th>{t("quiz.question")}</th>
                   <th>{t("results.answered")}</th>
                   {results.room.activityType === "QUIZ" && (
                     <th>{t("results.correct")}</th>

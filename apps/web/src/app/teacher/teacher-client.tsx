@@ -158,15 +158,13 @@ export default function TeacherClient({ token }: { token: string }) {
               noValidate
             >
               <label className="sr-only" htmlFor="quiz-title">
-                {t("activity.title", { type: t(`activity.${type}.name`) })}
+                {t(`activity.${type}.title`)}
               </label>
               <input
                 id="quiz-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={t("activity.title", {
-                  type: t(`activity.${type}.name`),
-                })}
+                placeholder={t(`activity.${type}.title`)}
                 aria-invalid={errorCode === "VALIDATION_ERROR"}
                 aria-describedby={
                   errorCode === "VALIDATION_ERROR"

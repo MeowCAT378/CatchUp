@@ -14,6 +14,7 @@ export const socketBaseUrl =
   process.env.NEXT_PUBLIC_SOCKET_URL?.trim().replace(/\/$/, "") || apiBaseUrl;
 
 export type ApiErrorCode =
+  | "NOT_FOUND"
   | "ROOM_NOT_FOUND"
   | "QUIZ_NOT_FOUND"
   | "PARTICIPANT_NOT_FOUND"

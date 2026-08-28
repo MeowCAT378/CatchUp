@@ -182,7 +182,7 @@ export function Select({
           {selectedOption?.label}
         </span>
         <ChevronDownIcon
-          className={`size-4 shrink-0 text-slate-600 transition-transform duration-150 motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+          className={`size-4 shrink-0 text-ui-muted transition-transform duration-150 motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
           aria-hidden="true"
         />
       </button>
@@ -198,7 +198,7 @@ export function Select({
               ? `${id}-option-${visibleOptions[activeIndex].value}`
               : undefined
           }
-          className="select-content absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-md outline-none"
+          className="select-content absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-ui-control border border-ui-border bg-ui-surface-solid p-1 shadow-ui-overlay outline-none"
         >
           {searchable && (
             <div className="p-1">
@@ -232,7 +232,7 @@ export function Select({
                   className={`select-option ${selected ? "select-option-selected" : active ? "select-option-active" : ""}`}
                 >
                   <CheckIcon
-                    className={`size-4 shrink-0 ${selected ? "text-sky-700" : "invisible"}`}
+                    className={`size-4 shrink-0 ${selected ? "text-ui-primary" : "invisible"}`}
                     aria-hidden="true"
                   />
                   <span className="min-w-0 truncate">{option.label}</span>
@@ -240,7 +240,7 @@ export function Select({
               );
             })
           ) : (
-            <p className="px-2.5 py-2 text-sm text-slate-500">{emptyLabel}</p>
+            <p className="px-2.5 py-2 text-sm text-ui-muted">{emptyLabel}</p>
           )}
         </div>
       )}

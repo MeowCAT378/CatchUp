@@ -108,7 +108,7 @@ export function DateFilterPicker({
 
   return (
     <div className={`relative ${className ?? ""}`} ref={pickerRef}>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-slate-700">
+      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-ui-text">
         {label}
       </label>
       <button
@@ -123,40 +123,40 @@ export function DateFilterPicker({
         }}
         className="form-input mt-0 flex h-11 min-h-0 items-center justify-between text-left"
       >
-        <span className={value ? "text-slate-900" : "text-slate-600"}>{formattedValue}</span>
-        <CalendarDaysIcon className="size-4 shrink-0 text-slate-600" aria-hidden="true" />
+        <span className={value ? "text-foreground" : "text-ui-muted"}>{formattedValue}</span>
+        <CalendarDaysIcon className="size-4 shrink-0 text-ui-muted" aria-hidden="true" />
       </button>
       {open && (
         <div
           role="dialog"
           aria-label={label}
-          className="absolute right-0 z-30 mt-2 w-[calc(100vw-2.5rem)] rounded-lg border border-neutral-200 bg-white p-3 shadow-md sm:w-[19rem]"
+          className="absolute left-1/2 z-30 mt-2 w-80 max-w-[calc(100vw-0.5rem)] translate-x-[calc(-50%+0.25rem)] rounded-ui-control border border-ui-border bg-ui-surface-solid py-1 shadow-ui-overlay"
         >
-          <div className="mb-2 flex items-center justify-between">
-            <button type="button" className="rounded-md p-1 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600" onClick={() => changeMonth(-1)} aria-label={previousMonthLabel}>
+          <div className="mb-2 flex items-center justify-between px-2">
+            <button type="button" className="inline-flex size-11 items-center justify-center rounded-md text-ui-muted hover:bg-ui-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus" onClick={() => changeMonth(-1)} aria-label={previousMonthLabel}>
               <ChevronLeftIcon className="size-4" aria-hidden="true" />
             </button>
-            <strong className="text-sm font-semibold text-[#1d1d1f]">{monthLabel}</strong>
-            <button type="button" className="rounded-md p-1 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600" onClick={() => changeMonth(1)} aria-label={nextMonthLabel}>
+            <strong className="text-sm font-semibold text-foreground">{monthLabel}</strong>
+            <button type="button" className="inline-flex size-11 items-center justify-center rounded-md text-ui-muted hover:bg-ui-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus" onClick={() => changeMonth(1)} aria-label={nextMonthLabel}>
               <ChevronRightIcon className="size-4" aria-hidden="true" />
             </button>
           </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center text-xs">
-            {weekdays.map((weekday) => <span key={weekday} className="py-1 font-medium text-slate-500">{weekday}</span>)}
+          <div className="grid grid-cols-7 text-center text-xs">
+            {weekdays.map((weekday) => <span key={weekday} className="py-1 font-medium text-ui-muted">{weekday}</span>)}
             {days.map((day) => {
               const date = toIsoDate(day);
               const selected = date === value;
               const outsideMonth = day.getMonth() !== month.getMonth();
               const disabled = isDisabled(date);
               const dayClassName = selected
-                ? "bg-sky-700 font-semibold text-white hover:bg-sky-800"
+                ? "bg-ui-primary font-semibold text-white hover:bg-ui-primary-hover"
                 : disabled
-                  ? "cursor-not-allowed text-slate-300"
+                  ? "cursor-not-allowed text-ui-muted/50"
                   : outsideMonth
-                    ? "text-slate-400 hover:bg-slate-100"
+                    ? "text-ui-muted/70 hover:bg-ui-surface-muted"
                     : date === today
-                      ? "font-semibold text-sky-700 ring-1 ring-sky-300 hover:bg-sky-50"
-                      : "text-[#1d1d1f] hover:bg-slate-100";
+                      ? "font-semibold text-ui-primary ring-1 ring-sky-300 hover:bg-ui-primary-soft"
+                      : "text-foreground hover:bg-ui-surface-muted";
               return (
                 <button
                   key={date}
@@ -165,16 +165,16 @@ export function DateFilterPicker({
                   aria-pressed={selected}
                   aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(day)}
                   onClick={() => selectDate(date)}
-                  className={`aspect-square rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 ${dayClassName}`}
+                  className={`aspect-square min-h-11 rounded-md text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus ${dayClassName}`}
                 >
                   {day.getDate()}
                 </button>
               );
             })}
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-neutral-200 pt-2 text-sm font-medium">
-            <button type="button" className="text-slate-600 hover:text-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600" onClick={() => selectDate("")}>{clearLabel}</button>
-            <button type="button" disabled={isDisabled(today)} className="text-sky-700 hover:text-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 disabled:text-slate-300" onClick={() => selectDate(today)}>{todayLabel}</button>
+          <div className="mx-2 mt-3 flex items-center justify-between border-t border-ui-border pt-2 text-sm font-medium">
+            <button type="button" className="min-h-11 text-ui-muted hover:text-ui-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus" onClick={() => selectDate("")}>{clearLabel}</button>
+            <button type="button" disabled={isDisabled(today)} className="min-h-11 text-ui-primary hover:text-ui-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus disabled:text-ui-muted/50" onClick={() => selectDate(today)}>{todayLabel}</button>
           </div>
         </div>
       )}

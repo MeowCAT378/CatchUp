@@ -12,8 +12,8 @@ export function TeacherHeader({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useTranslation();
   const pathname = usePathname();
   return (
-    <header className="fixed left-0 right-0 top-0 z-20 border-b border-neutral-200 bg-white/95 px-5 py-3 backdrop-blur-md sm:px-8">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
+    <header className="sticky top-0 z-20 border-b border-ui-border bg-ui-surface-solid/95 px-5 py-3 backdrop-blur-md sm:px-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 sm:grid-cols-[auto_1fr_auto]">
         <a
           href="/teacher"
           aria-label="CatchUp"
@@ -21,7 +21,10 @@ export function TeacherHeader({ isAdmin }: { isAdmin: boolean }) {
         >
           <Logo className="h-12 w-auto sm:h-14" />
         </a>
-        <div className="flex items-center gap-2">
+        <nav
+          className="order-3 col-span-2 flex flex-wrap gap-1 border-t border-neutral-200 pt-2 sm:order-none sm:col-span-1 sm:ml-auto sm:border-0 sm:pt-0"
+          aria-label={t("admin.navigation")}
+        >
           {isAdmin && (
             <Link
               href="/admin"
@@ -36,6 +39,8 @@ export function TeacherHeader({ isAdmin }: { isAdmin: boolean }) {
           >
             {t("history.title")}
           </Link>
+        </nav>
+        <div className="flex items-center justify-end gap-2">
           <LanguageSwitcher />
           <button
             type="button"

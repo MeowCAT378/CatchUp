@@ -8,9 +8,9 @@ export default async function TeacherLayout({
 }) {
   const { user } = await requireUser("HOST");
   return (
-    <>
+    <div className="teacher-shell">
       <TeacherHeader isAdmin={user.role === "ADMIN"} />
       {children}
-    </>
+    </div>
   );
 }

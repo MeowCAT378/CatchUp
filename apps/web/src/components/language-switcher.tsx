@@ -23,18 +23,18 @@ export function LanguageSwitcher({
   return (
     <div
       role="group"
-      className="inline-flex items-center gap-1 rounded-lg border border-white/80 bg-white/90 p-1 text-slate-900 shadow-sm"
+      className="inline-flex items-center gap-1 rounded-ui-control border border-ui-border bg-ui-surface-solid/90 p-1 text-foreground shadow-ui-control"
       aria-label={t("common.language")}
     >
       <LanguageIcon
-        className="hidden h-4 w-4 text-sky-700 sm:block"
+        className="hidden h-4 w-4 text-ui-primary sm:block"
         aria-hidden="true"
       />
       <button
         type="button"
         aria-pressed={i18n.language === "th"}
         onClick={() => setLanguage("th")}
-        className={`min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "th" ? "bg-sky-700 text-white" : "hover:bg-sky-50"}`}
+        className={`min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors duration-150 focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "th" ? "bg-ui-primary text-white" : "hover:bg-ui-primary-soft"}`}
       >
         ไทย
       </button>
@@ -42,7 +42,7 @@ export function LanguageSwitcher({
         type="button"
         aria-pressed={i18n.language === "en"}
         onClick={() => setLanguage("en")}
-        className={`min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "en" ? "bg-sky-700 text-white" : "hover:bg-sky-50"}`}
+        className={`min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors duration-150 focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "en" ? "bg-ui-primary text-white" : "hover:bg-ui-primary-soft"}`}
       >
         EN
       </button>

@@ -184,7 +184,7 @@ export default function ResultsClient({
           <h1 className="page-title">
             {t("results.results", { title: results.room.quizTitle })}
           </h1>
-          <span className="flex gap-2">
+          <span className="flex flex-wrap gap-2">
             <button
               disabled={!!downloading}
               onClick={() => void download("csv")}

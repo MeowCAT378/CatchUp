@@ -1,8 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f7;
+  --background: #f4f7f8;
   --foreground: #1d1d1f;
+  --ui-surface: rgba(255, 255, 255, 0.88);
+  --ui-surface-solid: #ffffff;
+  --ui-surface-muted: #f8fafc;
+  --ui-border: #dbe3e7;
+  --ui-border-strong: #cbd5db;
+  --ui-text: #334155;
+  --ui-text-muted: #64748b;
+  --ui-primary: #0369a1;
+  --ui-primary-hover: #075985;
+  --ui-primary-soft: #e0f2fe;
+  --ui-focus: #0284c7;
+  --ui-success: #047857;
+  --ui-warning: #b45309;
+  --ui-danger: #b91c1c;
+  --radius-control: 0.5rem;
+  --radius-panel: 0.75rem;
+  --radius-overlay: 1rem;
+  --shadow-control: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --shadow-panel:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 10px 28px rgba(14, 116, 144, 0.05);
+  --shadow-overlay: 0 18px 48px rgba(15, 23, 42, 0.16);
+  --motion-fast: 160ms;
   --font-ui:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Helvetica Neue", Arial, sans-serif;
@@ -15,156 +38,189 @@ html[lang="th"] {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ui-surface: var(--ui-surface);
+  --color-ui-surface-solid: var(--ui-surface-solid);
+  --color-ui-surface-muted: var(--ui-surface-muted);
+  --color-ui-border: var(--ui-border);
+  --color-ui-border-strong: var(--ui-border-strong);
+  --color-ui-text: var(--ui-text);
+  --color-ui-muted: var(--ui-text-muted);
+  --color-ui-primary: var(--ui-primary);
+  --color-ui-primary-hover: var(--ui-primary-hover);
+  --color-ui-primary-soft: var(--ui-primary-soft);
+  --color-ui-focus: var(--ui-focus);
+  --color-ui-success: var(--ui-success);
+  --color-ui-warning: var(--ui-warning);
+  --color-ui-danger: var(--ui-danger);
+  --radius-ui-control: var(--radius-control);
+  --radius-ui-panel: var(--radius-panel);
+  --radius-ui-overlay: var(--radius-overlay);
+  --shadow-ui-control: var(--shadow-control);
+  --shadow-ui-panel: var(--shadow-panel);
+  --shadow-ui-overlay: var(--shadow-overlay);
   --font-sans: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @layer base {
   html {
-    scrollbar-color: #94a3b8 #e2e8f0;
+    scrollbar-color: var(--ui-text-muted) var(--ui-border);
   }
   body {
-    @apply min-h-screen bg-[#f4f7f8] font-sans text-[#1d1d1f] antialiased;
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
   }
   button,
   a,
   input,
   select,
   textarea {
-    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ui-focus;
   }
   input,
   select,
   textarea {
-    @apply bg-white text-[#1d1d1f] caret-sky-700 placeholder:text-slate-500;
+    @apply bg-ui-surface-solid text-foreground caret-ui-primary placeholder:text-ui-muted;
   }
   ::selection {
-    background: #bae6fd;
-    color: #082f49;
+    background: var(--ui-primary-soft);
+    color: var(--ui-primary-hover);
   }
 }
 
 @layer components {
   .page-shell {
-    @apply relative isolate min-h-screen overflow-hidden bg-[#f4f7f8];
+    @apply relative isolate min-h-screen overflow-hidden bg-background;
     background:
       radial-gradient(
         circle at 12% 12%,
-        rgba(125, 211, 252, 0.2),
+        rgba(125, 211, 252, 0.16),
         transparent 34%
       ),
       radial-gradient(
         circle at 88% 18%,
-        rgba(94, 234, 212, 0.16),
+        rgba(94, 234, 212, 0.12),
         transparent 38%
       ),
       radial-gradient(
         circle at 52% 92%,
-        rgba(253, 186, 116, 0.1),
+        rgba(253, 186, 116, 0.08),
         transparent 40%
       ),
-      #f4f7f8;
+      var(--background);
   }
   .page-shell-hero {
     background:
       radial-gradient(
         circle at 16% 24%,
-        rgba(56, 189, 248, 0.34),
+        rgba(56, 189, 248, 0.3),
         transparent 32%
       ),
       radial-gradient(
         circle at 84% 26%,
-        rgba(45, 212, 191, 0.28),
+        rgba(45, 212, 191, 0.24),
         transparent 38%
       ),
       radial-gradient(
         circle at 54% 84%,
-        rgba(251, 146, 60, 0.2),
+        rgba(251, 146, 60, 0.16),
         transparent 40%
       ),
-      #f5f7fa;
+      var(--background);
   }
   .page-shell-join {
     background:
       radial-gradient(
         circle at 14% 25%,
-        rgba(56, 189, 248, 0.3),
+        rgba(56, 189, 248, 0.26),
         transparent 38%
       ),
       radial-gradient(
         circle at 85% 40%,
-        rgba(20, 184, 166, 0.24),
+        rgba(20, 184, 166, 0.2),
         transparent 42%
       ),
       radial-gradient(
         circle at 55% 92%,
-        rgba(251, 146, 60, 0.16),
+        rgba(251, 146, 60, 0.12),
         transparent 38%
       ),
-      #f5f7fa;
+      var(--background);
   }
   .page-shell.history-page {
     background:
       radial-gradient(circle at 12% 12%, rgba(125, 211, 252, 0.12), transparent 34%),
       radial-gradient(circle at 88% 18%, rgba(94, 234, 212, 0.08), transparent 38%),
-      #f5f7fa;
+      var(--background);
   }
   .page-content {
     @apply relative z-10 mx-auto w-full max-w-7xl px-5 pb-10 pt-24 sm:px-8 sm:pb-14 sm:pt-28 lg:px-10;
   }
-  .admin-shell .page-content {
-    @apply pt-40 sm:pt-28;
+  .admin-shell .page-content,
+  .teacher-shell .page-content {
+    @apply pt-8 sm:pt-10;
   }
   .panel {
-    @apply rounded-xl border border-neutral-200/90 bg-white/85 p-5 shadow-sm sm:p-6;
+    @apply rounded-ui-panel border border-ui-border bg-ui-surface p-5 shadow-ui-panel sm:p-6;
   }
   .panel label:not(.sr-only) {
-    @apply text-sm font-medium text-slate-800;
+    @apply text-sm font-medium text-ui-text;
   }
   .soft-card {
-    @apply rounded-xl border border-neutral-200/90 bg-white/80 p-4;
+    @apply rounded-ui-panel border border-ui-border bg-ui-surface p-4;
   }
   .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-sky-800 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-ui-control bg-ui-primary px-4 py-2.5 text-sm font-semibold text-white shadow-ui-control ease-out hover:bg-ui-primary-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
+    transition-duration: var(--motion-fast);
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
   .btn-secondary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#1d1d1f] transition duration-150 ease-out hover:-translate-y-0.5 hover:border-neutral-300 hover:bg-neutral-50 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-ui-control border border-ui-border bg-ui-surface-solid px-4 py-2.5 text-sm font-semibold text-foreground ease-out hover:border-ui-border-strong hover:bg-ui-surface-muted disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
+    transition-duration: var(--motion-fast);
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
   .back-button {
-    @apply inline-flex min-h-11 self-start items-center gap-1.5 whitespace-nowrap rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-[#1d1d1f] transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-neutral-50 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
+    @apply inline-flex min-h-11 self-start items-center gap-1.5 whitespace-nowrap rounded-ui-control border border-ui-border bg-ui-surface-solid px-3 py-2 text-sm font-medium text-foreground ease-out hover:border-ui-border-strong hover:bg-ui-surface-muted disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
+    transition-duration: var(--motion-fast);
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
   .form-input {
-    @apply mt-1 min-h-11 w-full rounded-lg border border-neutral-300 px-3 py-2.5 shadow-sm outline-none transition duration-150 hover:border-neutral-400 focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none;
+    @apply mt-1 min-h-11 w-full rounded-ui-control border border-ui-border-strong px-3 py-2.5 shadow-ui-control outline-none ease-out hover:border-ui-muted focus:border-ui-focus focus:ring-4 focus:ring-ui-focus/10 disabled:cursor-not-allowed disabled:border-ui-border disabled:bg-ui-surface-muted disabled:text-ui-muted motion-reduce:transition-none;
+    transition-duration: var(--motion-fast);
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
   .alert-error {
-    @apply rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800;
+    @apply rounded-ui-control border border-red-200 bg-red-50 px-4 py-3 text-sm text-ui-danger;
   }
   .badge {
-    @apply inline-flex items-center whitespace-nowrap rounded-md bg-neutral-100 px-2.5 py-1 text-sm font-medium;
+    @apply inline-flex items-center whitespace-nowrap rounded-md bg-ui-surface-muted px-2.5 py-1 text-sm font-medium text-ui-text;
   }
   .btn-danger {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-red-800 active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-ui-control bg-ui-danger px-4 py-2.5 text-sm font-semibold text-white ease-out hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
+    transition-duration: var(--motion-fast);
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
   .btn-danger-ghost {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold text-red-700 transition-colors duration-150 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-ui-control px-3 py-2.5 text-sm font-semibold text-ui-danger ease-out hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
+    transition-duration: var(--motion-fast);
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
   .page-title {
-    @apply text-3xl font-semibold tracking-tight text-[#1d1d1f] sm:text-4xl;
+    @apply text-3xl font-semibold tracking-tight text-foreground sm:text-4xl;
   }
   .section-title {
-    @apply text-xl font-semibold tracking-tight text-[#1d1d1f];
+    @apply text-xl font-semibold tracking-tight text-foreground;
   }
   .filter-bar {
-    @apply mt-6 border-y border-neutral-200 py-4;
+    @apply mt-6 border-y border-ui-border py-4;
   }
   .table-surface {
-    @apply mt-6 overflow-x-auto rounded-xl border border-neutral-200 bg-white/85;
+    @apply mt-6 overflow-x-auto rounded-ui-panel border border-ui-border bg-ui-surface;
   }
   .data-table {
     @apply w-full text-left text-sm;
   }
   .data-table thead {
-    @apply bg-neutral-50/90 text-neutral-600;
+    @apply bg-ui-surface-muted text-ui-text;
   }
   .data-table th {
     @apply whitespace-nowrap px-4 py-3 font-semibold;
@@ -173,47 +229,29 @@ html[lang="th"] {
     @apply px-4 py-3 align-middle;
   }
   .data-table tbody tr {
-    @apply border-t border-neutral-200/80 transition-colors duration-150 hover:bg-sky-50/40 motion-reduce:transition-none;
+    @apply border-t border-ui-border transition-colors duration-150 hover:bg-ui-primary-soft/40 motion-reduce:transition-none;
   }
   .empty-state {
-    @apply mt-6 rounded-xl border border-dashed border-neutral-300 bg-white/60 px-5 py-10 text-center text-neutral-600;
-  }
-  .history-page .filter-bar {
-    @apply border-slate-300;
-  }
-  .history-page .form-input {
-    @apply border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 hover:border-slate-400 focus:border-sky-700 focus:ring-sky-700/10;
-  }
-  .history-page .table-surface {
-    @apply border-slate-300 bg-white;
-  }
-  .history-page .data-table {
-    @apply text-slate-800;
-  }
-  .history-page .data-table thead {
-    @apply bg-slate-100 text-slate-700;
-  }
-  .history-page .data-table tbody tr {
-    @apply border-slate-200 hover:bg-slate-50/70;
+    @apply mt-6 rounded-ui-panel border border-dashed border-ui-border-strong bg-ui-surface/70 px-5 py-10 text-center text-ui-muted;
   }
   .select-content {
-    animation: select-enter 140ms ease-out;
+    animation: select-enter var(--motion-fast) ease-out;
   }
   .select-option {
-    @apply flex min-h-9 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-slate-800 transition-colors hover:bg-slate-100;
+    @apply flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-ui-text transition-colors hover:bg-ui-surface-muted;
   }
   .select-option-active {
-    @apply bg-slate-100 text-[#0f172a];
+    @apply bg-ui-surface-muted text-foreground;
   }
   .select-option-selected {
-    @apply bg-sky-50 font-medium text-sky-800;
+    @apply bg-ui-primary-soft font-medium text-ui-primary-hover;
   }
   .dialog-surface {
     @apply m-auto max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] overflow-y-auto border-0 bg-transparent p-0;
     animation: dialog-enter 180ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .dialog-surface::backdrop {
-    background: rgba(15, 23, 42, 0.42);
+    background: rgba(15, 23, 42, 0.38);
     animation: dialog-backdrop-enter 180ms ease-out;
   }
   @media (prefers-reduced-motion: reduce) {

@@ -14,7 +14,7 @@ export function AdminHeader() {
   const linkClass = (active: boolean) =>
     `inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium transition-colors sm:px-3 ${active ? "bg-white/15 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`;
   return (
-    <header className="fixed left-0 right-0 top-0 z-20 border-b border-cyan-900/20 bg-cyan-950/95 px-5 py-3 text-white backdrop-blur-md sm:px-8">
+    <header className="sticky top-0 z-20 border-b border-cyan-900/20 bg-cyan-950/95 px-5 py-3 text-white backdrop-blur-md sm:px-8">
       <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 sm:grid-cols-[auto_1fr_auto]">
         <a
           href="/admin"

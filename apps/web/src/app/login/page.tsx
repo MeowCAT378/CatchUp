@@ -74,7 +74,7 @@ export default function LoginPage() {
             )}
           </form>
           <a
-            className="mt-5 block font-semibold text-sky-700 hover:text-sky-800"
+            className="mt-5 inline-flex min-h-11 items-center font-semibold text-sky-700 hover:text-sky-800"
             href="/register"
           >
             {t("auth.register")}

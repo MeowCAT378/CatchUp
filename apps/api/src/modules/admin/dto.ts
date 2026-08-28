@@ -13,11 +13,26 @@ import {
   MinLength,
 } from 'class-validator';
 import { Role } from '@prisma/client';
+import { PasswordDto } from '../auth/dto';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 const email = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
+
+export class CreateUserDto extends PasswordDto {
+  @Transform(trim)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  name!: string;
+  @Transform(email)
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+}
+
+export class ResetUserPasswordDto extends PasswordDto {}
 
 export class TeacherQueryDto {
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) search?: string;

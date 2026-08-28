@@ -1,4 +1,5 @@
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { AdminService } from './admin.service';
 
 describe('AdminService', () => {
@@ -56,6 +57,152 @@ describe('AdminService', () => {
     });
   });
 
+  it('creates an enabled HOST with a safe response and audit entry', async () => {
+    const created = {
+      id: 'teacher',
+      name: 'New Teacher',
+      email: 'new@example.test',
+      role: Role.HOST,
+      isDisabled: false,
+      createdAt: new Date('2026-08-28T00:00:00.000Z'),
+      updatedAt: new Date('2026-08-28T00:00:00.000Z'),
+    };
+    let createdPasswordHash = '';
+    const create = jest
+      .fn()
+      .mockImplementation(({ data }: { data: { passwordHash: string } }) => {
+        createdPasswordHash = data.passwordHash;
+        return Promise.resolve(created);
+      });
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const tx = { user: { create }, adminAuditLog: { create: audit } };
+    const service = new AdminService(
+      {
+        $transaction: jest
+          .fn()
+          .mockImplementation((work: (client: typeof tx) => unknown) =>
+            work(tx),
+          ),
+      } as never,
+      {} as never,
+    );
+
+    const result = await service.createUser('admin', {
+      name: 'New Teacher',
+      email: ' NEW@Example.Test ',
+      password: 'password123',
+    });
+
+    expect(result).toEqual(created);
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(result).not.toHaveProperty('tokenVersion');
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        name: 'New Teacher',
+        email: 'new@example.test',
+        passwordHash: createdPasswordHash,
+        role: Role.HOST,
+        isDisabled: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isDisabled: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    await expect(
+      bcrypt.compare('password123', createdPasswordHash),
+    ).resolves.toBe(true);
+    expect(audit).toHaveBeenCalledWith({
+      data: {
+        adminId: 'admin',
+        targetUserId: 'teacher',
+        action: 'TEACHER_CREATED',
+      },
+    });
+  });
+
+  it('maps duplicate user creation to EMAIL_IN_USE', async () => {
+    const duplicate = new Prisma.PrismaClientKnownRequestError('Duplicate', {
+      code: 'P2002',
+      clientVersion: 'test',
+    });
+    const service = new AdminService(
+      { $transaction: jest.fn().mockRejectedValue(duplicate) } as never,
+      {} as never,
+    );
+
+    await expect(
+      service.createUser('admin', {
+        name: 'Teacher',
+        email: 'teacher@example.test',
+        password: 'password123',
+      }),
+    ).rejects.toMatchObject({ code: 'EMAIL_IN_USE', status: 409 });
+  });
+
+  it('resets HOST or ADMIN passwords atomically and invalidates self sessions', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      id: 'admin',
+      role: Role.ADMIN,
+    });
+    let resetPasswordHash = '';
+    const update = jest
+      .fn()
+      .mockImplementation(({ data }: { data: { passwordHash: string } }) => {
+        resetPasswordHash = data.passwordHash;
+        return Promise.resolve({ id: 'admin' });
+      });
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      user: { findFirst, update },
+      adminAuditLog: { create: audit },
+    };
+    const prisma = {
+      $transaction: jest
+        .fn()
+        .mockImplementation((work: (client: typeof tx) => unknown) => work(tx)),
+    };
+    const disconnectHost = jest.fn();
+    const service = new AdminService(
+      prisma as never,
+      { disconnectHost } as never,
+    );
+
+    const result = await service.resetUserPassword('admin', 'admin', {
+      password: 'new-password123',
+    });
+
+    expect(result).toEqual({ id: 'admin', currentSessionInvalidated: true });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { id: 'admin', role: { in: [Role.HOST, Role.ADMIN] } },
+      select: { id: true },
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'admin' },
+      data: {
+        passwordHash: resetPasswordHash,
+        tokenVersion: { increment: 1 },
+      },
+      select: { id: true },
+    });
+    await expect(
+      bcrypt.compare('new-password123', resetPasswordHash),
+    ).resolves.toBe(true);
+    expect(audit).toHaveBeenCalledWith({
+      data: {
+        adminId: 'admin',
+        targetUserId: 'admin',
+        action: 'USER_PASSWORD_RESET',
+      },
+    });
+    expect(disconnectHost).toHaveBeenCalledWith('admin');
+  });
+
   it('soft-disables teacher, writes audit, and disconnects host sockets', async () => {
     const update = jest.fn().mockResolvedValue({
       id: 'teacher',
@@ -85,7 +232,9 @@ describe('AdminService', () => {
     );
     await service.updateStatus('admin', 'teacher', { isDisabled: true });
     expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { isDisabled: true } }),
+      expect.objectContaining({
+        data: { isDisabled: true, tokenVersion: { increment: 1 } },
+      }),
     );
     expect(audit).toHaveBeenCalledWith({
       data: {
@@ -95,6 +244,41 @@ describe('AdminService', () => {
       },
     });
     expect(disconnectHost).toHaveBeenCalledWith('teacher');
+  });
+
+  it('re-enables an account without restoring its token version', async () => {
+    const update = jest.fn().mockResolvedValue({
+      id: 'teacher',
+      role: Role.HOST,
+      isDisabled: false,
+    });
+    const prisma = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'teacher',
+          role: Role.HOST,
+          isDisabled: true,
+        }),
+        update,
+      },
+      adminAuditLog: { create: jest.fn() },
+      $transaction: jest.fn(),
+    };
+    prisma.$transaction.mockImplementation(
+      (work: (tx: typeof prisma) => unknown) => work(prisma),
+    );
+    const disconnectHost = jest.fn();
+    const service = new AdminService(
+      prisma as never,
+      { disconnectHost } as never,
+    );
+
+    await service.updateStatus('admin', 'teacher', { isDisabled: false });
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { isDisabled: false } }),
+    );
+    expect(disconnectHost).not.toHaveBeenCalled();
   });
 
   it('promotes a HOST by changing only the role and recording an audit entry', async () => {
@@ -107,7 +291,7 @@ describe('AdminService', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
     };
-    let stored = { ...original };
+    let stored = { ...original, role: original.role as Role };
     const audit: { adminId: string; targetUserId: string; action: string }[] =
       [];
     const tx = {

@@ -28,7 +28,9 @@ async function proxy(
           : {}),
       },
       body:
-        request.method === "PATCH" ? await request.arrayBuffer() : undefined,
+        request.method === "PATCH" || request.method === "POST"
+          ? await request.arrayBuffer()
+          : undefined,
       cache: "no-store",
     },
   );
@@ -41,3 +43,4 @@ async function proxy(
 
 export const GET = proxy;
 export const PATCH = proxy;
+export const POST = proxy;

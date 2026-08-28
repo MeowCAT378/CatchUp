@@ -607,6 +607,7 @@ export class RoomsService {
     participantId?: string,
     participantToken?: string,
     userId?: string,
+    tokenVersion?: number,
   ) {
     const room = await this.room(code);
     if (userId === room.hostId) {
@@ -615,6 +616,7 @@ export class RoomsService {
           id: userId,
           isDisabled: false,
           role: { in: [Role.HOST, Role.ADMIN] },
+          tokenVersion: tokenVersion ?? 0,
         },
         select: { id: true },
       });

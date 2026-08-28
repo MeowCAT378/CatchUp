@@ -3,7 +3,10 @@ import { Prisma, Role, RoomStatus } from '@prisma/client';
 import { AppError } from '../../common/app-error';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RoomsGateway } from '../rooms/rooms.gateway';
+import { hashPassword, normalizeEmail } from '../auth/auth.service';
 import {
+  CreateUserDto,
+  ResetUserPasswordDto,
   TeacherQueryDto,
   UpdateTeacherDto,
   UpdateTeacherStatusDto,
@@ -146,6 +149,69 @@ export class AdminService {
     };
   }
 
+  async createUser(adminId: string, dto: CreateUserDto) {
+    try {
+      const passwordHash = await hashPassword(dto.password);
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            name: dto.name,
+            email: normalizeEmail(dto.email),
+            passwordHash,
+            role: Role.HOST,
+            isDisabled: false,
+          },
+          select: teacherSelect,
+        });
+        await tx.adminAuditLog.create({
+          data: {
+            adminId,
+            targetUserId: user.id,
+            action: 'TEACHER_CREATED',
+          },
+        });
+        return user;
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new AppError('EMAIL_IN_USE', 409, 'Email is already registered');
+      throw error;
+    }
+  }
+
+  async resetUserPassword(
+    adminId: string,
+    id: string,
+    dto: ResetUserPasswordDto,
+  ) {
+    const passwordHash = await hashPassword(dto.password);
+    const target = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findFirst({
+        where: { id, role: { in: [Role.HOST, Role.ADMIN] } },
+        select: { id: true },
+      });
+      if (!user) throw new AppError('USER_NOT_FOUND', 404, 'User not found');
+      const updated = await tx.user.update({
+        where: { id },
+        data: { passwordHash, tokenVersion: { increment: 1 } },
+        select: { id: true },
+      });
+      await tx.adminAuditLog.create({
+        data: {
+          adminId,
+          targetUserId: id,
+          action: 'USER_PASSWORD_RESET',
+        },
+      });
+      return updated;
+    });
+    this.roomsGateway.disconnectHost(id);
+    return { id: target.id, currentSessionInvalidated: adminId === id };
+  }
+
   async teacher(id: string) {
     const teacher = await this.prisma.user.findFirst({
       where: { id, role: { in: [Role.HOST, Role.ADMIN] } },
@@ -233,7 +299,10 @@ export class AdminService {
     const teacher = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id },
-        data: { isDisabled: dto.isDisabled },
+        data: {
+          isDisabled: dto.isDisabled,
+          ...(dto.isDisabled ? { tokenVersion: { increment: 1 } } : {}),
+        },
         select: teacherSelect,
       });
       await tx.adminAuditLog.create({

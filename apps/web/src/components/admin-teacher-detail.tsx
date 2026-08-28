@@ -3,10 +3,12 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import { signOut } from "next-auth/react";
 import { ActivityTypeBadge } from "@/components/activity-type-badge";
 import { Dialog } from "@/components/dialog";
 import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonActivityCard, SkeletonText } from "@/components/skeleton";
+import { PasswordInput } from "@/components/password-input";
 
 type Teacher = {
   id: string;
@@ -42,6 +44,10 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<ApiErrorCode | "">("");
@@ -105,6 +111,44 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
       setBusy(false);
     }
   }
+  function closeReset() {
+    setResetting(false);
+    setPassword("");
+    setPasswordConfirmation("");
+    setPasswordMismatch(false);
+  }
+  async function resetPassword(event: FormEvent) {
+    event.preventDefault();
+    if (submitting.current) return;
+    if (password !== passwordConfirmation) {
+      setPasswordMismatch(true);
+      return;
+    }
+    submitting.current = true;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await secureApi<{
+        id: string;
+        currentSessionInvalidated: boolean;
+      }>(`/admin/users/${teacherId}/password`, {
+        method: "PATCH",
+        body: JSON.stringify({ password }),
+      });
+      closeReset();
+      if (result.currentSessionInvalidated) {
+        await signOut({ callbackUrl: "/login" });
+        return;
+      }
+      setMessage(t("admin.passwordReset"));
+    } catch (value) {
+      setError(apiErrorCode(value));
+    } finally {
+      submitting.current = false;
+      setBusy(false);
+    }
+  }
   if (!teacher && !error)
     return (
       <main className="page-shell">
@@ -147,7 +191,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
             {t(teacher.isDisabled ? "admin.disabled" : "admin.active")}
           </span>
         </div>
-        {error && (
+        {error && !resetting && (
           <p className="alert-error mt-5" role="alert">
             {t(`errors.${error}`)}
           </p>
@@ -221,6 +265,17 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
               {t("history.title")}
             </a>
           )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setError("");
+              setResetting(true);
+            }}
+            className="btn-secondary mt-4"
+          >
+            {t("admin.resetPassword")}
+          </button>
           <dl className="mt-5 grid gap-2 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-slate-500">{t("admin.role")}</dt>
@@ -335,6 +390,91 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
                 </button>
               </div>
             </div>
+          </Dialog>
+        )}
+        {resetting && (
+          <Dialog
+            labelledBy="reset-password-title"
+            describedBy="reset-password-warning"
+            onClose={closeReset}
+          >
+            <form onSubmit={resetPassword} className="panel">
+              <h2 id="reset-password-title" className="section-title">
+                {t("admin.resetPasswordTitle", {
+                  name: teacher.name ?? teacher.email,
+                })}
+              </h2>
+              <p
+                id="reset-password-warning"
+                className="mt-3 text-slate-600"
+              >
+                {t("admin.resetPasswordWarning")}
+              </p>
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <label htmlFor="reset-user-password">
+                    {t("auth.password")}
+                  </label>
+                  <PasswordInput
+                    id="reset-user-password"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setPasswordMismatch(false);
+                    }}
+                    showPasswordLabel={t("admin.showPassword")}
+                    hidePasswordLabel={t("admin.hidePassword")}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reset-user-confirmation">
+                    {t("admin.confirmPassword")}
+                  </label>
+                  <PasswordInput
+                    id="reset-user-confirmation"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={passwordConfirmation}
+                    onChange={(event) => {
+                      setPasswordConfirmation(event.target.value);
+                      setPasswordMismatch(false);
+                    }}
+                    showPasswordLabel={t("admin.showPassword")}
+                    hidePasswordLabel={t("admin.hidePassword")}
+                  />
+                </div>
+                {passwordMismatch && (
+                  <p className="alert-error" role="alert">
+                    {t("admin.passwordMismatch")}
+                  </p>
+                )}
+                {error && (
+                  <p className="alert-error" role="alert">
+                    {t(`errors.${error}`)}
+                  </p>
+                )}
+              </div>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={closeReset}
+                  className="btn-secondary"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button disabled={busy} className="btn-primary">
+                  {t(
+                    busy ? "admin.resettingPassword" : "admin.resetPassword",
+                  )}
+                </button>
+              </div>
+            </form>
           </Dialog>
         )}
       </div>

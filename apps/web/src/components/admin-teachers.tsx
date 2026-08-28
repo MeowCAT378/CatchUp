@@ -6,6 +6,7 @@ import { apiErrorCode, secureApi, type ApiErrorCode } from "@/lib/api";
 import { SkeletonTable } from "@/components/skeleton";
 import { Select, type SelectOption } from "@/components/select";
 import { Dialog } from "@/components/dialog";
+import { PasswordInput } from "@/components/password-input";
 
 type Teacher = {
   id: string;
@@ -33,6 +34,13 @@ export function AdminTeachers() {
   const [message, setMessage] = useState("");
   const [promoting, setPromoting] = useState<Teacher>();
   const [promotingId, setPromotingId] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createConfirmation, setCreateConfirmation] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
   const statusOptions: SelectOption[] = [
     { value: "", label: t("admin.allStatuses") },
     { value: "ACTIVE", label: t("admin.active") },
@@ -102,10 +110,59 @@ export function AdminTeachers() {
       setPromotingId("");
     }
   }
+  function closeCreate() {
+    setCreating(false);
+    setCreatePassword("");
+    setCreateConfirmation("");
+    setPasswordMismatch(false);
+  }
+  async function createUser(event: FormEvent) {
+    event.preventDefault();
+    if (createBusy) return;
+    if (createPassword !== createConfirmation) {
+      setPasswordMismatch(true);
+      return;
+    }
+    setCreateBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await secureApi("/admin/users", {
+        method: "POST",
+        body: JSON.stringify({
+          name: createName,
+          email: createEmail,
+          password: createPassword,
+        }),
+      });
+      setResult(await secureApi<Result>(`/admin/teachers?${query}`));
+      setLoadedQuery(query);
+      setCreateName("");
+      setCreateEmail("");
+      closeCreate();
+      setMessage(t("admin.userCreated"));
+    } catch (value) {
+      setError(apiErrorCode(value));
+    } finally {
+      setCreateBusy(false);
+    }
+  }
   return (
     <main className="page-shell">
       <div className="page-content max-w-7xl">
-        <h1 className="page-title">{t("admin.teachers")}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="page-title">{t("admin.teachers")}</h1>
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setCreating(true);
+            }}
+            className="btn-primary"
+          >
+            {t("admin.createUser")}
+          </button>
+        </div>
         <form
           onSubmit={submit}
           className="filter-bar grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)_180px]"
@@ -149,7 +206,7 @@ export function AdminTeachers() {
             </button>
           </div>
         </form>
-        {error && (
+        {error && !creating && (
           <p className="alert-error mt-5" role="alert">
             {t(`errors.${error}`)}
           </p>
@@ -326,6 +383,105 @@ export function AdminTeachers() {
                 </button>
               </div>
             </div>
+          </Dialog>
+        )}
+        {creating && (
+          <Dialog labelledBy="create-user-title" onClose={closeCreate}>
+            <form onSubmit={createUser} className="panel">
+              <h2 id="create-user-title" className="section-title">
+                {t("admin.createUserTitle")}
+              </h2>
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <label htmlFor="create-user-name">{t("common.name")}</label>
+                  <input
+                    id="create-user-name"
+                    required
+                    minLength={2}
+                    maxLength={100}
+                    autoComplete="name"
+                    value={createName}
+                    onChange={(event) => setCreateName(event.target.value)}
+                    className="form-input"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-user-email">{t("admin.email")}</label>
+                  <input
+                    id="create-user-email"
+                    required
+                    type="email"
+                    maxLength={254}
+                    autoComplete="email"
+                    value={createEmail}
+                    onChange={(event) => setCreateEmail(event.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-user-password">
+                    {t("auth.password")}
+                  </label>
+                  <PasswordInput
+                    id="create-user-password"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={createPassword}
+                    onChange={(event) => {
+                      setCreatePassword(event.target.value);
+                      setPasswordMismatch(false);
+                    }}
+                    showPasswordLabel={t("admin.showPassword")}
+                    hidePasswordLabel={t("admin.hidePassword")}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="create-user-confirmation">
+                    {t("admin.confirmPassword")}
+                  </label>
+                  <PasswordInput
+                    id="create-user-confirmation"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={createConfirmation}
+                    onChange={(event) => {
+                      setCreateConfirmation(event.target.value);
+                      setPasswordMismatch(false);
+                    }}
+                    showPasswordLabel={t("admin.showPassword")}
+                    hidePasswordLabel={t("admin.hidePassword")}
+                  />
+                </div>
+                {passwordMismatch && (
+                  <p className="alert-error" role="alert">
+                    {t("admin.passwordMismatch")}
+                  </p>
+                )}
+                {error && (
+                  <p className="alert-error" role="alert">
+                    {t(`errors.${error}`)}
+                  </p>
+                )}
+              </div>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={createBusy}
+                  onClick={closeCreate}
+                  className="btn-secondary"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button disabled={createBusy} className="btn-primary">
+                  {t(
+                    createBusy ? "admin.creatingUser" : "admin.createUser",
+                  )}
+                </button>
+              </div>
+            </form>
           </Dialog>
         )}
       </div>

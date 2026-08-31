@@ -5,7 +5,7 @@ if (!url || !/test/i.test(new URL(url).pathname)) throw new Error('CATCHUP_TEST_
 const command = process.argv[2];
 const extraArgs = process.argv.slice(3);
 const bin = (name) => process.platform === 'win32' ? `node_modules/.bin/${name}.cmd` : `node_modules/.bin/${name}`;
-const run = (name, args) => execFileSync(process.platform === 'win32' ? process.execPath : bin(name), process.platform === 'win32' ? [`node_modules/${name === 'prisma' ? 'prisma/build/index.js' : 'jest/bin/jest.js'}`, ...args] : args, { stdio: 'inherit', env: { ...process.env, DATABASE_URL: url } });
+const run = (name, args) => execFileSync(process.platform === 'win32' ? process.execPath : bin(name), process.platform === 'win32' ? [`node_modules/${name === 'prisma' ? 'prisma/build/index.js' : 'jest/bin/jest.js'}`, ...args] : args, { stdio: 'inherit', env: { ...process.env, DATABASE_URL: url, DIRECT_URL: url } });
 if (command === 'migrate') run('prisma', ['migrate', 'deploy']);
 else if (command === 'test') run('jest', ['--config', './test/jest-e2e.json', '--runInBand', ...extraArgs]);
 else throw new Error('Use migrate or test.');

@@ -2,9 +2,14 @@ export const teacher = {
   th: {
     teacher: {
       logout: "ออกจากระบบ",
-      deleteQuestionConfirm: "แน่ใจหรือไม่ว่าต้องการลบคำถามนี้?",
+      deleteQuestionConfirm: "ลบคำถามนี้หรือไม่?",
       deleteQuestionWarning:
         "ข้อมูลที่เกี่ยวข้องกับคำถามนี้จะถูกลบด้วย และไม่สามารถย้อนกลับได้",
+      deleteActivityTitle: "ลบกิจกรรมนี้หรือไม่?",
+      deleteActivityWarning:
+        "กิจกรรมนี้จะหายจากแดชบอร์ด แต่ประวัติการจัดกิจกรรมและผลลัพธ์เดิมจะยังอยู่",
+      deleteActivity: "ลบกิจกรรม",
+      deletingActivity: "กำลังลบ…",
     },
   },
   en: {
@@ -21,11 +26,3 @@ export const teacher = {
     },
   },
 };
-
-Object.assign(teacher.th.teacher, {
-  deleteActivityTitle: "ลบกิจกรรมนี้หรือไม่?",
-  deleteActivityWarning:
-    "กิจกรรมจะถูกนำออกจากแดชบอร์ด แต่ประวัติเซสชันและผลลัพธ์เดิมจะยังคงอยู่",
-  deleteActivity: "ลบกิจกรรม",
-  deletingActivity: "กำลังลบ…",
-});

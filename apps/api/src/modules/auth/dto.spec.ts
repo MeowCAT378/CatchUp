@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto, PasswordDto, RegisterDto } from './dto';
 
 describe('auth DTOs', () => {
   it('trims a valid registration name without changing the password', async () => {
@@ -67,5 +67,23 @@ describe('auth DTOs', () => {
     });
 
     await expect(validate(dto)).resolves.not.toHaveLength(0);
+  });
+
+  it.each([
+    ['shorter than 8 characters', 'short'],
+    ['longer than 72 UTF-8 bytes', 'ก'.repeat(25)],
+  ])('keeps the shared password rule: %s', async (_case, password) => {
+    await expect(
+      validate(plainToInstance(PasswordDto, { password })),
+    ).resolves.not.toHaveLength(0);
+  });
+
+  it('accepts a shared password at both boundaries', async () => {
+    await expect(
+      validate(plainToInstance(PasswordDto, { password: '12345678' })),
+    ).resolves.toHaveLength(0);
+    await expect(
+      validate(plainToInstance(PasswordDto, { password: 'p'.repeat(72) })),
+    ).resolves.toHaveLength(0);
   });
 });

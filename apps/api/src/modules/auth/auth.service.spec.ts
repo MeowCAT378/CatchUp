@@ -49,4 +49,37 @@ describe('normalizeEmail', () => {
       }),
     ).rejects.toMatchObject({ code: 'ACCOUNT_DISABLED', status: 403 });
   });
+
+  it('signs the current token version into login JWTs', async () => {
+    const passwordHash = await bcrypt.hash('password123', 4);
+    const sign = jest.fn().mockReturnValue('token');
+    const service = new AuthService(
+      {
+        user: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'teacher',
+            email: 'teacher@example.test',
+            name: 'Teacher',
+            passwordHash,
+            role: 'HOST',
+            isDisabled: false,
+            tokenVersion: 3,
+          }),
+        },
+      } as never,
+      { sign } as never,
+    );
+
+    await service.login({
+      email: 'teacher@example.test',
+      password: 'password123',
+    });
+
+    expect(sign).toHaveBeenCalledWith({
+      sub: 'teacher',
+      email: 'teacher@example.test',
+      role: 'HOST',
+      tokenVersion: 3,
+    });
+  });
 });

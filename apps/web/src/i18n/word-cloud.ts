@@ -1,23 +1,27 @@
 export const wordCloud = {
   th: {
     wordCloud: {
-      addResponse: "เพิ่มคำตอบ",
+      addResponse: "ส่งคำตอบ",
+      submitted: "ส่งแล้ว",
+      responseProgress: "ส่งแล้ว {{submitted}} จาก {{total}} คน",
       vote: "โหวต",
       votes: "คะแนนโหวต",
       results: "ผลลัพธ์ Word Cloud",
-      totalVotes: "โหวตทั้งหมด",
+      totalVotes: "คะแนนโหวตรวม",
       noEntries: "ยังไม่มีคำตอบ",
       prompt: "คำถามสำหรับ Word Cloud",
       promptNotConfigured: "ยังไม่ได้ตั้งค่าคำถาม",
       prompts: "1 คำถาม",
-      responseAdded: "ส่งคำตอบแล้ว — รอผู้จัดกิจกรรม",
-      responseHint: "สูงสุด 30 ตัวอักษร ส่งได้คนละ 1 คำตอบ",
+      responseAdded: "ส่งคำตอบแล้ว",
+      responseHint: "กรอกได้สูงสุด 30 ตัวอักษร และส่งได้คนละ 1 คำตอบ",
       voted: "โหวตแล้ว",
     },
   },
   en: {
     wordCloud: {
       addResponse: "Add response",
+      submitted: "Submitted",
+      responseProgress: "Submitted {{submitted}} of {{total}}",
       vote: "Vote",
       votes: "Votes",
       results: "Word Cloud Results",

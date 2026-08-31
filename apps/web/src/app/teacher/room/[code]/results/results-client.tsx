@@ -10,6 +10,7 @@ import { BackButton } from "@/components/back-button";
 import { SkeletonResults } from "@/components/skeleton";
 import {
   api,
+  apiBaseUrl,
   apiErrorCode,
   ApiError,
   secureApi,
@@ -116,7 +117,7 @@ export default function ResultsClient({
       const response = await fetch(
         sessionId
           ? `/api/catchup/rooms/history/${sessionId}/export.${format}`
-          : `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/rooms/${code}/results/export.${format}`,
+          : `${apiBaseUrl}/rooms/${code}/results/export.${format}`,
         sessionId ? {} : { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!response.ok) {
@@ -181,9 +182,9 @@ export default function ResultsClient({
         <BackButton href={backHref ?? `/teacher/room/${code}`} />
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="page-title">
-            {results.room.quizTitle} {t("results.results")}
+            {t("results.results", { title: results.room.quizTitle })}
           </h1>
-          <span className="flex gap-2">
+          <span className="flex flex-wrap gap-2">
             <button
               disabled={!!downloading}
               onClick={() => void download("csv")}
@@ -263,12 +264,12 @@ export default function ResultsClient({
                 </h3>
                 <p className="mt-2 text-sm">
                   {question.responseCount} {t("results.responses")} ·{" "}
-                  {question.unansweredCount} {t("results.unanswered")}
+                  {t("results.unanswered")}: {question.unansweredCount}
                   {results.room.activityType === "QUIZ" && (
                     <>
                       {" "}
-                      · {question.correctCount} {t("results.correct")} ·{" "}
-                      {question.incorrectCount} {t("results.incorrect")} ·{" "}
+                      · {t("results.correct")}: {question.correctCount} ·{" "}
+                      {t("results.incorrect")}: {question.incorrectCount} ·{" "}
                       {t("results.correctPercentage")}:{" "}
                       {question.correctPercentage}%
                     </>
@@ -290,8 +291,10 @@ export default function ResultsClient({
                         >
                           <span>{word.text}</span>
                           <span>
-                            {word.submissionCount} {t("history.submissions")} ·{" "}
-                            {word.voteCount} {t("history.votes")}
+                            {t("history.wordStats", {
+                              submissions: word.submissionCount,
+                              votes: word.voteCount,
+                            })}
                           </span>
                         </div>
                       ))
@@ -333,7 +336,7 @@ export default function ResultsClient({
               <thead>
                 <tr className="border-b">
                   <th>{t("results.participant")}</th>
-                  <th>{t("results.questionNumber", { number: "" })}</th>
+                  <th>{t("quiz.question")}</th>
                   <th>{t("results.answered")}</th>
                   {results.room.activityType === "QUIZ" && (
                     <th>{t("results.correct")}</th>

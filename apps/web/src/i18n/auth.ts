@@ -2,7 +2,7 @@ export const auth = {
   th: {
     auth: {
       login: "เข้าสู่ระบบ",
-      register: "สร้างบัญชีผู้สอน",
+      register: "สร้างบัญชีครูผู้สอน",
       email: "อีเมล",
       password: "รหัสผ่าน",
       name: "ชื่อ",

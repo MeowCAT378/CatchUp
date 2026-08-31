@@ -22,3 +22,9 @@ apps/web/.env.local
 .vercel/
 *.tsbuildinfo
 command.txt
+.vercel
+doc/
+docs/diagrams
+.tmp
+.codex
+.impeccable

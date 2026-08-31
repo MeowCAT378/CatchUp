@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { apiBaseUrl } from "@/lib/api";
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
@@ -8,7 +9,7 @@ export const authOptions: NextAuthOptions = {
       credentials: { email: {}, password: {} },
       authorize: async (credentials) => {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/auth/login`,
+          `${apiBaseUrl}/auth/login`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

@@ -10,15 +10,17 @@ const email = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
-export class RegisterDto {
-  @Transform(email)
-  @IsEmail()
-  @MaxLength(254)
-  email!: string;
+export class PasswordDto {
   @IsString()
   @MinLength(8)
   @IsByteLength(0, 72)
   password!: string;
+}
+export class RegisterDto extends PasswordDto {
+  @Transform(email)
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
   @Transform(trim)
   @IsString()
   @MinLength(2)

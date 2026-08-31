@@ -21,8 +21,9 @@ support the current single-API-instance deployment only.
    ```
 
 2. In this directory, install dependencies and copy `.env.example` to `.env`.
-   Set `DATABASE_URL` to match the root Docker credentials and set a long,
-   deployment-only `JWT_SECRET` with at least 32 characters.
+   Set `DATABASE_URL` and `DIRECT_URL` to the same local connection string,
+   matching the root Docker credentials, and set a long, deployment-only
+   `JWT_SECRET` with at least 32 characters.
 
 3. Prepare the database and start the API:
 
@@ -103,3 +104,7 @@ docker run --rm --env-file .env -p 3001:3001 catchup-api
 Run the migration image once during a controlled release. The API process does
 not apply migrations on startup. `GET /health/live` checks only the process;
 `GET /health/ready` verifies PostgreSQL with `SELECT 1`.
+
+For Supabase staging, use the transaction pooler URL for `DATABASE_URL` and the
+session pooler or direct URL for `DIRECT_URL`. Run only `npx prisma migrate
+deploy` against staging; `prisma migrate dev` is for local migration authoring.

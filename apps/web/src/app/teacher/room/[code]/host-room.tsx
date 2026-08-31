@@ -159,9 +159,11 @@ export default function HostRoom({
               {code}
             </h1>
             <p className="mt-4 text-lg font-semibold">
-              {t("room.phase")}: {t(`room.${phase}`)} · {data?.connected ?? 0}{" "}
-              {t("common.connected")} / {data?.participants.length ?? 0}{" "}
-              {t("common.participants")}
+              {t("room.phase")}: {t(`room.${phase}`)} ·{" "}
+              {t("room.connectionSummary", {
+                connected: data?.connected ?? 0,
+                total: data?.participants.length ?? 0,
+              })}
             </p>
             {phase === "COMPLETED" &&
               data?.state.activityType !== "WORD_CLOUD" && (
@@ -201,11 +203,15 @@ export default function HostRoom({
               {data?.state.question?.text ?? t("room.waitingToStart")}
             </h2>
             <p className="mt-3 badge">
-              {data?.progress.submitted ?? 0} /{" "}
-              {data?.progress.participants ?? 0}{" "}
-              {data?.state.activityType === "WORD_CLOUD"
-                ? t("wordCloud.addResponse")
-                : t("common.answered")}
+              {t(
+                data?.state.activityType === "WORD_CLOUD"
+                  ? "wordCloud.responseProgress"
+                  : "room.responseProgress",
+                {
+                  submitted: data?.progress.submitted ?? 0,
+                  total: data?.progress.participants ?? 0,
+                },
+              )}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {data?.state.actions.canStart && (

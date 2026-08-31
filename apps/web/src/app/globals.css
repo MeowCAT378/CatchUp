@@ -159,6 +159,48 @@ html[lang="th"] {
   .teacher-shell .page-content {
     @apply pt-8 sm:pt-10;
   }
+
+  .app-nav-link {
+    @apply relative flex min-h-12 min-w-0 items-center gap-2.5 whitespace-nowrap rounded-ui-control px-3 text-sm font-medium text-ui-muted transition-colors duration-200 hover:bg-ui-surface-muted hover:text-foreground motion-reduce:transition-none;
+  }
+  .app-nav-link[aria-current="page"] {
+    @apply bg-ui-primary-soft/50 text-ui-primary;
+  }
+  .app-desktop-nav .app-nav-link {
+    @apply self-stretch rounded-none bg-transparent px-2 xl:px-3;
+  }
+  .app-desktop-nav .app-nav-link::after {
+    content: "";
+    @apply absolute inset-x-2 bottom-0 h-0.5 rounded-t bg-ui-primary opacity-0 transition-opacity duration-200 motion-reduce:transition-none;
+  }
+  .app-desktop-nav .app-nav-link[aria-current="page"]::after {
+    opacity: 1;
+  }
+  .app-nav-action {
+    @apply inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-ui-control text-sm font-medium text-ui-muted transition-colors duration-200 hover:bg-ui-surface-muted hover:text-foreground motion-reduce:transition-none;
+  }
+  .app-header-account .app-profile-copy {
+    @apply sr-only xl:not-sr-only;
+  }
+  .app-language-switcher {
+    @apply inline-flex shrink-0 items-center rounded-ui-control bg-ui-surface-muted p-0.5 text-sm;
+  }
+  .app-language-option {
+    @apply min-h-11 min-w-11 rounded-md px-2 text-ui-muted transition-colors duration-200 hover:text-foreground motion-reduce:transition-none;
+  }
+  .app-language-option[aria-pressed="true"] {
+    @apply bg-ui-surface-solid font-medium text-ui-primary shadow-ui-control;
+  }
+  .dialog-surface.navigation-drawer {
+    @apply border-l border-ui-border shadow-ui-overlay;
+    animation: navigation-drawer-enter 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .navigation-drawer.navigation-drawer-closing {
+    animation: navigation-drawer-exit 200ms ease-in forwards;
+  }
+  .navigation-drawer.navigation-drawer-closing::backdrop {
+    animation: dialog-backdrop-enter 200ms ease-in reverse forwards;
+  }
   .panel {
     @apply rounded-ui-panel border border-ui-border bg-ui-surface p-5 shadow-ui-panel sm:p-6;
   }
@@ -255,6 +297,8 @@ html[lang="th"] {
     animation: dialog-backdrop-enter 180ms ease-out;
   }
   @media (prefers-reduced-motion: reduce) {
+    .dialog-surface.navigation-drawer,
+    .navigation-drawer.navigation-drawer-closing,
     .select-content,
     .dialog-surface,
     .dialog-surface::backdrop {
@@ -281,4 +325,12 @@ html[lang="th"] {
   from {
     background: rgba(15, 23, 42, 0);
   }
+}
+
+@keyframes navigation-drawer-enter {
+  from { transform: translateX(100%); }
+}
+
+@keyframes navigation-drawer-exit {
+  to { transform: translateX(100%); }
 }

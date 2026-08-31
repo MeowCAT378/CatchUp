@@ -2,6 +2,10 @@ export const common = {
   th: {
     common: {
       language: "ภาษา",
+      navigation: "เมนู",
+      openMenu: "เปิดเมนู",
+      closeMenu: "ปิดเมนู",
+      profile: "ข้อมูลผู้ใช้",
       thai: "ไทย",
       english: "English",
       loading: "กำลังโหลด…",
@@ -27,6 +31,10 @@ export const common = {
   en: {
     common: {
       language: "Language",
+      navigation: "Navigation",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
+      profile: "Profile",
       thai: "ไทย",
       english: "English",
       loading: "Loading…",

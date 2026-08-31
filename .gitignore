@@ -24,3 +24,7 @@ apps/web/.env.local
 command.txt
 .vercel
 doc/
+docs/diagrams
+.tmp
+.codex
+.impeccable

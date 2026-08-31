@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 
 export function LanguageSwitcher({
   hideOnTeacher = false,
+  variant = "default",
 }: {
   hideOnTeacher?: boolean;
+  variant?: "default" | "navigation";
 }) {
   const { i18n, t } = useTranslation();
   const pathname = usePathname();
@@ -23,18 +25,28 @@ export function LanguageSwitcher({
   return (
     <div
       role="group"
-      className="inline-flex items-center gap-1 rounded-ui-control border border-ui-border bg-ui-surface-solid/90 p-1 text-foreground shadow-ui-control"
+      className={
+        variant === "navigation"
+          ? "app-language-switcher"
+          : "inline-flex items-center gap-1 rounded-ui-control border border-ui-border bg-ui-surface-solid/90 p-1 text-foreground shadow-ui-control"
+      }
       aria-label={t("common.language")}
     >
-      <LanguageIcon
-        className="hidden h-4 w-4 text-ui-primary sm:block"
-        aria-hidden="true"
-      />
+      {variant === "default" && (
+        <LanguageIcon
+          className="hidden h-4 w-4 text-ui-primary sm:block"
+          aria-hidden="true"
+        />
+      )}
       <button
         type="button"
         aria-pressed={i18n.language === "th"}
         onClick={() => setLanguage("th")}
-        className={`min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors duration-150 focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "th" ? "bg-ui-primary text-white" : "hover:bg-ui-primary-soft"}`}
+        className={
+          variant === "navigation"
+            ? "app-language-option"
+            : `min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors duration-150 focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "th" ? "bg-ui-primary text-white" : "hover:bg-ui-primary-soft"}`
+        }
       >
         ไทย
       </button>
@@ -42,7 +54,11 @@ export function LanguageSwitcher({
         type="button"
         aria-pressed={i18n.language === "en"}
         onClick={() => setLanguage("en")}
-        className={`min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors duration-150 focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "en" ? "bg-ui-primary text-white" : "hover:bg-ui-primary-soft"}`}
+        className={
+          variant === "navigation"
+            ? "app-language-option"
+            : `min-h-11 min-w-11 rounded-md px-2 py-1 transition-colors duration-150 focus-visible:outline-2 motion-reduce:transition-none ${i18n.language === "en" ? "bg-ui-primary text-white" : "hover:bg-ui-primary-soft"}`
+        }
       >
         EN
       </button>

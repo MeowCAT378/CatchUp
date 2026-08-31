@@ -152,6 +152,52 @@ describe('RoomsService state machine', () => {
       target.socketAccess('123456', undefined, undefined, 'host'),
     ).rejects.toMatchObject({ status: 403 });
   });
+  it('rejects privileged socket access with a stale token version', async () => {
+    let checkedTokenVersion: number | undefined;
+    const findFirst = jest
+      .fn()
+      .mockImplementation(({ where }: { where: { tokenVersion?: number } }) => {
+        checkedTokenVersion = where.tokenVersion;
+        return Promise.resolve(
+          where.tokenVersion === 1 ? null : { id: 'host' },
+        );
+      });
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE)),
+      },
+      user: { findFirst },
+    } as never);
+
+    await expect(
+      target.socketAccess('123456', undefined, undefined, 'host', 1),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(checkedTokenVersion).toBe(1);
+  });
+  it('leaves participant socket authentication independent of token versions', async () => {
+    const target = new RoomsService({
+      room: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(room(RoomPhase.ACTIVE, RoomStatus.ACTIVE)),
+      },
+      participant: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'player',
+          displayName: 'Player',
+        }),
+      },
+    } as never);
+
+    await expect(
+      target.socketAccess('123456', 'player', 'token', undefined, 99),
+    ).resolves.toMatchObject({
+      role: 'participant',
+      participantId: 'player',
+    });
+  });
   it('retries a colliding generated code', async () => {
     const codes: string[] = [];
     const duplicate = new Prisma.PrismaClientKnownRequestError('Duplicate', {
@@ -464,6 +510,11 @@ describe('RoomsService state machine', () => {
   });
   it('uses attributed word-cloud responders for dashboard completion', async () => {
     const answerFindMany = jest.fn();
+    const findUnique = jest
+      .fn()
+      .mockResolvedValue(
+        room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
+      );
     const groupBy = jest
       .fn()
       .mockResolvedValue([
@@ -471,13 +522,7 @@ describe('RoomsService state machine', () => {
         { participantId: null },
       ]);
     const target = new RoomsService({
-      room: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue(
-            room(RoomPhase.ACTIVE, RoomStatus.ACTIVE, ActivityType.WORD_CLOUD),
-          ),
-      },
+      room: { findUnique },
       participant: {
         findMany: jest.fn().mockResolvedValue([
           { id: 'player-1', displayName: 'Submitted' },
@@ -513,6 +558,7 @@ describe('RoomsService state machine', () => {
       progress: { submitted: 1, participants: 2 },
     });
     expect(answerFindMany).not.toHaveBeenCalled();
+    expect(findUnique).toHaveBeenCalledTimes(1);
     expect(groupBy).toHaveBeenCalledWith({
       by: ['participantId'],
       where: {

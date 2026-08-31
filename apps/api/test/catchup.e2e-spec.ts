@@ -41,6 +41,14 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
     await prisma.quiz.deleteMany({
       where: { owner: { email: { startsWith: 'e2e+' } } },
     });
+    await prisma.adminAuditLog.deleteMany({
+      where: {
+        OR: [
+          { admin: { email: { startsWith: 'e2e+' } } },
+          { targetUser: { email: { startsWith: 'e2e+' } } },
+        ],
+      },
+    });
     await prisma.user.deleteMany({ where: { email: { startsWith: 'e2e+' } } });
   };
 
@@ -455,6 +463,179 @@ describe('CatchUp critical flow (PostgreSQL + REST + Socket.io)', () => {
       "'=นักเรียนไทย",
     );
   }, 30_000);
+
+  it('creates users and revokes REST and host Socket.io tokens on reset or disable', async () => {
+    const register = async (email: string, name: string) =>
+      body<{ accessToken: string }>(
+        await request(app.getHttpServer())
+          .post('/auth/register')
+          .send({ email, name, password: 'password123' })
+          .expect(201),
+      ).data.accessToken;
+    const login = async (email: string, password: string) =>
+      body<{ accessToken: string }>(
+        await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({ email, password })
+          .expect(201),
+      ).data.accessToken;
+    const adminEmail = 'e2e+admin-users@example.test';
+    const hostEmail = 'e2e+managed-host@example.test';
+    await register(adminEmail, 'Admin');
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: { role: Role.ADMIN },
+    });
+    const adminToken = await login(adminEmail, 'password123');
+    const ordinaryHostToken = await register(
+      'e2e+ordinary-host@example.test',
+      'Ordinary Host',
+    );
+
+    await request(app.getHttpServer())
+      .post('/admin/users')
+      .set('Authorization', `Bearer ${ordinaryHostToken}`)
+      .send({
+        name: 'Blocked',
+        email: 'e2e+blocked@example.test',
+        password: 'password123',
+      })
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch('/admin/users/missing/password')
+      .set('Authorization', `Bearer ${ordinaryHostToken}`)
+      .send({ password: 'new-password123' })
+      .expect(403);
+
+    const created = body<{ id: string; role: Role; isDisabled: boolean }>(
+      await request(app.getHttpServer())
+        .post('/admin/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Managed Host',
+          email: hostEmail,
+          password: 'password123',
+        })
+        .expect(201),
+    ).data;
+    expect(created).toMatchObject({ role: Role.HOST, isDisabled: false });
+    expect(created).not.toHaveProperty('passwordHash');
+    expect(created).not.toHaveProperty('tokenVersion');
+    await expect(
+      prisma.adminAuditLog.findFirst({
+        where: {
+          admin: { email: adminEmail },
+          targetUserId: created.id,
+          action: 'TEACHER_CREATED',
+        },
+      }),
+    ).resolves.toBeTruthy();
+    await request(app.getHttpServer())
+      .post('/admin/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Duplicate', email: hostEmail, password: 'password123' })
+      .expect(409)
+      .expect((response) => expect(errorCode(response)).toBe('EMAIL_IN_USE'));
+
+    const oldToken = await login(hostEmail, 'password123');
+    const quiz = body<{ id: string }>(
+      await request(app.getHttpServer())
+        .post('/quizzes')
+        .set('Authorization', `Bearer ${oldToken}`)
+        .send({
+          title: 'Revocation quiz',
+          type: 'QUIZ',
+          questions: [
+            {
+              text: 'Question',
+              choices: [
+                { text: 'Correct', isCorrect: true },
+                { text: 'Wrong', isCorrect: false },
+              ],
+            },
+          ],
+        })
+        .expect(201),
+    ).data;
+    const managedRoom = body<{ code: string }>(
+      await request(app.getHttpServer())
+        .post('/rooms')
+        .set('Authorization', `Bearer ${oldToken}`)
+        .send({ quizId: quiz.id })
+        .expect(201),
+    ).data;
+    const managedSocket = io(`${baseUrl}/rooms`, {
+      auth: { token: oldToken },
+      transports: ['websocket'],
+    });
+    await once(managedSocket, 'connect');
+    const ready = once(managedSocket, 'room:state');
+    managedSocket.emit('room:join', { code: managedRoom.code });
+    await ready;
+    const disconnected = once(managedSocket, 'disconnect');
+
+    await request(app.getHttpServer())
+      .patch(`/admin/users/${created.id}/password`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ password: 'new-password123' })
+      .expect(200)
+      .expect((response) =>
+        expect(
+          body<{ id: string; currentSessionInvalidated: boolean }>(response)
+            .data,
+        ).toEqual({
+          id: created.id,
+          currentSessionInvalidated: false,
+        }),
+      );
+    await disconnected;
+    await expect(
+      prisma.adminAuditLog.findFirst({
+        where: {
+          admin: { email: adminEmail },
+          targetUserId: created.id,
+          action: 'USER_PASSWORD_RESET',
+        },
+      }),
+    ).resolves.toBeTruthy();
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${oldToken}`)
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: hostEmail, password: 'password123' })
+      .expect(401);
+    const resetToken = await login(hostEmail, 'new-password123');
+
+    const staleSocket = io(`${baseUrl}/rooms`, {
+      auth: { token: oldToken },
+      transports: ['websocket'],
+    });
+    await once(staleSocket, 'connect');
+    const staleError = once<{ code: string }>(staleSocket, 'room:error');
+    staleSocket.emit('room:join', { code: managedRoom.code });
+    expect((await staleError).code).toBe('FORBIDDEN');
+    staleSocket.disconnect();
+
+    await request(app.getHttpServer())
+      .patch(`/admin/teachers/${created.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isDisabled: true })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/admin/teachers/${created.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isDisabled: false })
+      .expect(200);
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${resetToken}`)
+      .expect(401);
+    await expect(login(hostEmail, 'new-password123')).resolves.toEqual(
+      expect.any(String),
+    );
+  });
 
   it('deletes unused questions but preserves questions used by rooms', async () => {
     const owner = await prisma.user.findUniqueOrThrow({

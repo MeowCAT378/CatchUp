@@ -45,14 +45,21 @@ export function AdminOverview() {
           className="mt-7 grid divide-y divide-neutral-200 border-y border-neutral-200 bg-white/55 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3"
           aria-busy={!data}
         >
-          {!data && !error ? Array.from({ length: 6 }, (_, index) => <SkeletonStatCard key={index} />) : data && cards.map(([label, value]) => (
-            <div key={label} className="px-5 py-4">
-              <p className="text-sm text-slate-500">{t(label)}</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
-            </div>
-          ))}
+          {!data && !error
+            ? Array.from({ length: 6 }, (_, index) => (
+                <SkeletonStatCard key={index} />
+              ))
+            : data &&
+              cards.map(([label, value]) => (
+                <div key={label} className="px-5 py-4">
+                  <p className="text-sm text-slate-500">{t(label)}</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums">
+                    {value}
+                  </p>
+                </div>
+              ))}
         </div>
-        <div className="mt-7 flex gap-3">
+        <div className="mt-7 flex flex-wrap gap-3">
           <Link href="/admin/teachers" className="btn-secondary">
             {t("admin.teachers")}
           </Link>

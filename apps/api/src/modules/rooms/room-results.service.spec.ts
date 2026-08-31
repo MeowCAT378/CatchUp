@@ -36,8 +36,6 @@ const room = {
           questionId: 'q1',
           choiceId: 'c1',
           isCorrect: true,
-          choice: { text: 'Correct' },
-          question: { text: 'Question' },
           submittedAt: new Date('2026-08-22T00:02:00Z'),
         },
       ],
@@ -51,8 +49,6 @@ const room = {
           questionId: 'q1',
           choiceId: 'c2',
           isCorrect: false,
-          choice: { text: 'Wrong' },
-          question: { text: 'Question' },
           submittedAt: new Date('2026-08-22T00:02:00Z'),
         },
       ],
@@ -68,7 +64,11 @@ const room = {
 };
 describe('RoomResultsService', () => {
   it('calculates summary, competition ranks, and hides correct answers before reveal', async () => {
-    const prisma = { room: { findUnique: jest.fn().mockResolvedValue(room) } };
+    const findUnique = jest.fn((query: unknown) => {
+      void query;
+      return Promise.resolve(room);
+    });
+    const prisma = { room: { findUnique } };
     const results = await new RoomResultsService(prisma as never).results(
       'ROOM1',
       'host',
@@ -91,6 +91,11 @@ describe('RoomResultsService', () => {
       correctChoiceId: null,
     });
     expect(results.questions[0].distribution[0].isCorrect).toBeUndefined();
+    expect(results.responses[0]).toMatchObject({
+      question: 'Question',
+      selectedAnswer: 'Correct',
+    });
+    expect(findUnique.mock.calls[0]?.[0]).toHaveProperty('select');
   });
   it('reveals correct answers only in allowed phases', async () => {
     const prisma = {

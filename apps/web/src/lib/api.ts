@@ -1,6 +1,20 @@
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+function deploymentUrl(value: string | undefined, name: string) {
+  const url = value?.trim().replace(/\/$/, "");
+  if (url) return url;
+  if (process.env.NODE_ENV === "production")
+    throw new Error(`${name} is required in production`);
+  return "http://localhost:3001";
+}
+
+export const apiBaseUrl = deploymentUrl(
+  process.env.NEXT_PUBLIC_API_URL,
+  "NEXT_PUBLIC_API_URL",
+);
+export const socketBaseUrl =
+  process.env.NEXT_PUBLIC_SOCKET_URL?.trim().replace(/\/$/, "") || apiBaseUrl;
 
 export type ApiErrorCode =
+  | "NOT_FOUND"
   | "ROOM_NOT_FOUND"
   | "QUIZ_NOT_FOUND"
   | "PARTICIPANT_NOT_FOUND"
@@ -8,6 +22,9 @@ export type ApiErrorCode =
   | "EMAIL_IN_USE"
   | "ACCOUNT_DISABLED"
   | "TEACHER_NOT_FOUND"
+  | "USER_NOT_FOUND"
+  | "SELF_ROLE_CHANGE"
+  | "INVALID_ROLE_TRANSITION"
   | "DISPLAY_NAME_IN_USE"
   | "DUPLICATE_ENTRY"
   | "ALREADY_VOTED"
@@ -68,7 +85,7 @@ async function request<T>(
 }
 
 export function api<T>(path: string, init: RequestInit = {}, token?: string) {
-  return request<T>(`${baseUrl}${path}`, init, token);
+  return request<T>(`${apiBaseUrl}${path}`, init, token);
 }
 
 export function secureApi<T>(path: string, init: RequestInit = {}) {

@@ -254,14 +254,20 @@ export default function QuizEditor({
                 quiz?.type !== "WORD_CLOUD" && (
                   <div key={index} className="mt-3 flex items-center gap-3">
                     {quiz?.type === "QUIZ" && (
-                      <input
-                        aria-label={t("quiz.markCorrect")}
-                        checked={correctIndex === index}
-                        onChange={() => setCorrectIndex(index)}
-                        type="radio"
-                        name="correct-choice"
-                        className="size-5 accent-emerald-600"
-                      />
+                      <label
+                        htmlFor={`correct-choice-${index}`}
+                        className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center"
+                      >
+                        <input
+                          id={`correct-choice-${index}`}
+                          aria-label={t("quiz.markCorrect")}
+                          checked={correctIndex === index}
+                          onChange={() => setCorrectIndex(index)}
+                          type="radio"
+                          name="correct-choice"
+                          className="size-5 accent-emerald-600"
+                        />
+                      </label>
                     )}
                     <label className="sr-only" htmlFor={`choice-${index}`}>
                       {t("quiz.choiceNumber", { number: index + 1 })}

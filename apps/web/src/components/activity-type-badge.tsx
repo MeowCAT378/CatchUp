@@ -10,9 +10,18 @@ import { useTranslation } from "react-i18next";
 type ActivityType = "QUIZ" | "POLL" | "WORD_CLOUD";
 
 const styles = {
-  QUIZ: [QuestionMarkCircleIcon, "border border-slate-200 bg-slate-50 text-slate-700"],
-  POLL: [ChartBarIcon, "border border-slate-200 bg-slate-50 text-slate-700"],
-  WORD_CLOUD: [ChatBubbleLeftRightIcon, "border border-teal-200 bg-teal-50 text-teal-800"],
+  QUIZ: [
+    QuestionMarkCircleIcon,
+    "border border-ui-border bg-ui-surface-muted text-ui-text",
+  ],
+  POLL: [
+    ChartBarIcon,
+    "border border-ui-border bg-ui-surface-muted text-ui-text",
+  ],
+  WORD_CLOUD: [
+    ChatBubbleLeftRightIcon,
+    "border border-teal-200 bg-teal-50 text-teal-800",
+  ],
 } as const;
 
 export function ActivityTypeBadge({ type }: { type: ActivityType }) {

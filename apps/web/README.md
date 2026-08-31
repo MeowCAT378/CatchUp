@@ -47,3 +47,8 @@ docker run --rm -p 3000:3000 catchup-web
 
 `GET /api/health` is a Web-process liveness check. API/database readiness is
 reported separately by the API at `GET /health/ready`.
+
+For Vercel, set the project Root Directory to `apps/web` and use the native
+Next.js build. Configure `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SOCKET_URL`,
+`NEXTAUTH_URL`, and `NEXTAUTH_SECRET`; the two public URLs are embedded at build
+time. The Dockerfile is not needed by Vercel.

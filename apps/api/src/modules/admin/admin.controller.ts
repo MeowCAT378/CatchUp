@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -13,11 +14,15 @@ import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
+import { checkRateLimit } from '../../common/rate-limit';
 import { AdminService } from './admin.service';
 import {
+  CreateUserDto,
+  ResetUserPasswordDto,
   TeacherQueryDto,
   UpdateTeacherDto,
   UpdateTeacherStatusDto,
+  UpdateUserRoleDto,
 } from './dto';
 
 @Controller('admin')
@@ -28,6 +33,21 @@ export class AdminController {
 
   @Get('overview') overview() {
     return this.admin.overview();
+  }
+  @Post('users') createUser(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateUserDto,
+  ) {
+    checkRateLimit(`admin-password-write:${user.sub}`, 10, 60_000);
+    return this.admin.createUser(user.sub, dto);
+  }
+  @Patch('users/:id/password') resetUserPassword(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ResetUserPasswordDto,
+  ) {
+    checkRateLimit(`admin-password-write:${user.sub}`, 10, 60_000);
+    return this.admin.resetUserPassword(user.sub, id, dto);
   }
   @Get('teachers') teachers(@Query() query: TeacherQueryDto) {
     return this.admin.teachers(query);
@@ -48,5 +68,12 @@ export class AdminController {
     @Body() dto: UpdateTeacherStatusDto,
   ) {
     return this.admin.updateStatus(user.sub, id, dto);
+  }
+  @Patch('users/:id/role') updateRole(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserRoleDto,
+  ) {
+    return this.admin.updateRole(user.sub, id, dto);
   }
 }

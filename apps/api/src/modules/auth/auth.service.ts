@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '../../common/app-error';
 import { LoginDto, RegisterDto } from './dto';
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
+export const hashPassword = (password: string) => bcrypt.hash(password, 12);
 @Injectable()
 export class AuthService {
   constructor(
@@ -19,7 +20,7 @@ export class AuthService {
         data: {
           email,
           name: dto.name,
-          passwordHash: await bcrypt.hash(dto.password, 12),
+          passwordHash: await hashPassword(dto.password),
         },
       });
       return this.token(user);
@@ -48,8 +49,14 @@ export class AuthService {
     email: string;
     name: string | null;
     role: string;
+    tokenVersion: number;
   }) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      tokenVersion: user.tokenVersion,
+    };
     return {
       accessToken: this.jwt.sign(payload),
       user: {

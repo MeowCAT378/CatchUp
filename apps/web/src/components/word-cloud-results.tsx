@@ -65,7 +65,7 @@ export function WordCloudResults({
             style={{
               fontSize: `clamp(22px, calc(6vw + ${wordCloudFontSize(entry.votes, minVotes, maxVotes) / 2}px), ${wordCloudFontSize(entry.votes, minVotes, maxVotes)}px)`,
             }}
-            className={`break-words text-center font-black leading-none ${wordCloudColor(entry.text)}`}
+            className={`max-w-full break-words text-center font-black leading-none ${wordCloudColor(entry.text)}`}
           >
             {entry.text}
           </span>

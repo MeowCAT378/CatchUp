@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import type { Namespace, Socket } from 'socket.io';
 import { AppError } from '../../common/app-error';
+import type { AuthUser } from '../../common/auth/auth-user';
 import { RoomsService } from './rooms.service';
 import { RoomEvents } from './room-events';
 import { checkRateLimit } from '../../common/rate-limit';
@@ -18,8 +19,10 @@ import {
   parseTrustProxyHops,
   trustedClientAddress,
 } from '../../common/network/trusted-client-address';
+import { webOrigin } from '../../common/network/web-origin';
 type SocketData = {
   userId?: string;
+  tokenVersion?: number;
   code?: string;
   participantId?: string;
   participantToken?: string;
@@ -42,9 +45,11 @@ export const socketCorsOrigin = (
   origin: string | undefined,
   callback: (error: Error | null, allowed?: boolean) => void,
 ) => {
-  const configuredOrigin =
-    process.env.WEB_ORIGIN?.trim() || 'http://localhost:3000';
-  callback(null, origin === undefined || origin === configuredOrigin);
+  try {
+    callback(null, origin === undefined || origin === webOrigin());
+  } catch (error) {
+    callback(error as Error);
+  }
 };
 
 @WebSocketGateway({
@@ -65,9 +70,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const token = client.handshake.auth.token as string | undefined;
     if (!token) return;
     try {
-      (client.data as SocketData).userId = this.jwt.verify<{ sub: string }>(
-        token,
-      ).sub;
+      const payload = this.jwt.verify<AuthUser>(token);
+      const data = client.data as SocketData;
+      data.userId = payload.sub;
+      data.tokenVersion = payload.tokenVersion ?? 0;
     } catch {
       client.disconnect();
     }
@@ -97,6 +103,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         payload.participantId,
         payload.participantToken,
         (client.data as SocketData).userId,
+        (client.data as SocketData).tokenVersion,
       );
       const data = client.data as SocketData;
       data.code = access.code;
@@ -306,7 +313,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (data.role !== 'host' || data.code !== code)
         throw new ForbiddenException();
       checkRateLimit(`socket-host:${data.userId}:${code}`, 20, 10_000);
-      await this.rooms.socketAccess(code, undefined, undefined, data.userId);
+      await this.rooms.socketAccess(
+        code,
+        undefined,
+        undefined,
+        data.userId,
+        data.tokenVersion,
+      );
       await action(code);
       await this.dashboard(code);
     } catch (error) {

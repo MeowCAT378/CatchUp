@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
+import { apiBaseUrl } from "@/lib/api";
 
 async function proxy(
   request: Request,
@@ -17,7 +18,7 @@ async function proxy(
   const source = new URL(request.url);
   const path = (await params).path.map(encodeURIComponent).join("/");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/${path}${source.search}`,
+    `${apiBaseUrl}/${path}${source.search}`,
     {
       method: request.method,
       headers: {
@@ -27,7 +28,9 @@ async function proxy(
           : {}),
       },
       body:
-        request.method === "PATCH" ? await request.arrayBuffer() : undefined,
+        request.method === "PATCH" || request.method === "POST"
+          ? await request.arrayBuffer()
+          : undefined,
       cache: "no-store",
     },
   );
@@ -40,3 +43,4 @@ async function proxy(
 
 export const GET = proxy;
 export const PATCH = proxy;
+export const POST = proxy;

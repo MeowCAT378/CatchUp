@@ -159,3 +159,73 @@ describe('RoomsGateway event errors', () => {
     expect(submit).not.toHaveBeenCalled();
   });
 });
+
+describe('RoomsGateway host token revocation', () => {
+  it('normalizes and stores the JWT token version at connection', () => {
+    const gateway = new RoomsGateway(
+      {} as never,
+      {
+        verify: jest.fn().mockReturnValue({ sub: 'host' }),
+      } as never,
+    );
+    const client = {
+      handshake: { auth: { token: 'legacy-token' } },
+      data: {},
+      disconnect: jest.fn(),
+    };
+
+    gateway.handleConnection(client as never);
+
+    expect(client.data).toEqual({ userId: 'host', tokenVersion: 0 });
+  });
+
+  it('passes the connected token version during the initial host join', async () => {
+    const socketAccess = jest.fn().mockRejectedValue(new Error('stale'));
+    const gateway = new RoomsGateway({ socketAccess } as never, {} as never);
+    const client = {
+      id: 'socket',
+      handshake: { address: '127.0.0.1' },
+      data: { userId: 'host', tokenVersion: 2 },
+      emit: jest.fn(),
+      leave: jest.fn(),
+    };
+
+    await gateway.join(client as never, { code: '123456' });
+
+    expect(socketAccess).toHaveBeenCalledWith(
+      '123456',
+      undefined,
+      undefined,
+      'host',
+      2,
+    );
+  });
+
+  it('passes the connected token version through every host event wrapper', async () => {
+    const socketAccess = jest.fn().mockRejectedValue(new Error('stale'));
+    const gateway = new RoomsGateway({ socketAccess } as never, {} as never);
+    const client = {
+      handshake: { address: '127.0.0.1' },
+      data: {
+        role: 'host',
+        code: '123456',
+        userId: 'host',
+        tokenVersion: 3,
+      },
+      emit: jest.fn(),
+    };
+
+    await gateway.questionStart(client as never, { code: '123456' });
+
+    expect(socketAccess).toHaveBeenCalledWith(
+      '123456',
+      undefined,
+      undefined,
+      'host',
+      3,
+    );
+    expect(client.emit).toHaveBeenCalledWith(RoomEvents.error, {
+      code: 'REQUEST_FAILED',
+    });
+  });
+});

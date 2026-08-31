@@ -4,7 +4,7 @@ export function Skeleton({ className = "" }: SkeletonProps) {
   return (
     <span
       aria-hidden="true"
-      className={`block animate-pulse rounded-lg bg-slate-200/70 motion-reduce:animate-none ${className}`}
+      className={`block animate-pulse rounded-ui-control bg-ui-border/70 motion-reduce:animate-none ${className}`}
     />
   );
 }
@@ -33,7 +33,7 @@ export function SkeletonTable({
     <div className="table-surface" aria-hidden="true">
       <div className="min-w-[42rem]">
         <div
-          className="grid gap-5 border-b border-slate-200/70 p-3"
+          className="grid gap-5 border-b border-ui-border p-3"
           style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         >
           {Array.from({ length: columns }, (_, index) => (
@@ -46,7 +46,7 @@ export function SkeletonTable({
         {Array.from({ length: rows }, (_, row) => (
           <div
             key={row}
-            className="grid gap-5 border-b border-slate-200/70 p-3"
+            className="grid gap-5 border-b border-ui-border p-3"
             style={{
               gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
             }}

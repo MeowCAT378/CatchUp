@@ -4,4 +4,5 @@ export type AuthUser = {
   sub: string;
   email: string;
   role: Role;
+  tokenVersion?: number;
 };

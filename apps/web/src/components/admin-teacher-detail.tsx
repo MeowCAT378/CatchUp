@@ -183,7 +183,7 @@ export function AdminTeacherDetail({ teacherId }: { teacherId: string }) {
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="page-title">{teacher.name ?? teacher.email}</h1>
-            <p className="mt-1 text-slate-500">{teacher.id}</p>
+            {/* <p className="mt-1 text-slate-500">{teacher.id}</p> */}
           </div>
           <span
             className={`badge ${teacher.isDisabled ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}

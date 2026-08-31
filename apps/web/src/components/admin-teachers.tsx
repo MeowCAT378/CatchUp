@@ -254,9 +254,6 @@ export function AdminTeachers() {
                       <div className="break-all text-sm text-slate-500">
                         {teacher.email}
                       </div>
-                      <div className="hidden text-xs text-slate-400 sm:block">
-                        {teacher.id}
-                      </div>
                     </td>
                     <td>
                       <span
